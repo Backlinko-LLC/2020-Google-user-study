@@ -1,4 +1,3 @@
-  
 ---
 title: "Google User Study"
 author: ""
@@ -51,7 +50,124 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.showte
 knitr::knit_hooks$set(inline = function(x) {
   prettyNum(x, big.mark = ",", small.mark = ",", scientific = F)
 })
+plots <- readRDS(here::here("proc_data/plots.RDS"))
 ```
 
 
 # 0. Introduction
+
+
+# When typing the search query, did they select one of the suggested searches? (Y/N)
+
+
+```{r}
+plots[["When typing the search query, did they select one of the suggested searches? (Y/N)"]]
+```
+
+# Seconds to first click (use check time stamping on video)
+
+```{r}
+plots[["Seconds to first click (use check time stamping on video)"]]
+```
+
+
+# Did they scroll to the end of the Google Search Page (Y/N)?
+
+```{r}
+plots[["Did they scroll to the end of the Google Search Page (Y/N)?"]]
+```
+
+
+# Times changed/modified search query
+
+```{r}
+plots[["Times changed/modified search query"]]
+```
+
+# Times searcher clicks a result, then bounces back to the search results page and chooses a different result
+
+```{r}
+plots[["Times searcher clicks a result, then bounces back to the search results page and chooses a different result"]]
+```
+
+
+# Number of pages visited
+
+```{r}
+plots[["Number of pages visited"]]
+```
+
+
+# Clicks on organic search results
+
+```{r}
+plots[["Clicks on organic search results"]]
+```
+
+
+# Clicks on Google AdWords/paid listings
+
+```{r}
+plots[["Clicks on Google AdWords/paid listings"]]
+```
+
+
+# Clicks on video results
+
+```{r}
+plots[["Clicks on video results"]]
+```
+
+
+# Clicks on Google Maps/local listings
+
+```{r}
+plots[["Clicks on Google Maps/local listings"]]
+```
+
+
+# If clicked on Google Maps/local listing, did they click on one of the first three listings?
+
+Yes, 97% of the time
+
+
+# Clicks on Image blocks
+
+```{r}
+plots[["Clicks on Image blocks"]]
+```
+
+
+# Clicks on Google Shopping results
+
+```{r}
+plots[["Clicks on Google Shopping results"]]
+```
+
+
+# Clicks "people also ask" box
+
+```{r}
+plots[["Clicks \"people also ask\" box"]]
+```
+
+# Clicks to 2nd+ Google page
+
+```{r}
+plots[["Clicks to 2nd+ Google page"]]
+```
+
+# Seconds to complete search task
+
+```{r}
+plots[["Seconds to complete search task"]]
+```
+
+# Total Clicks
+
+```{r}
+plots[["Total Clicks"]]
+```
+
+
+

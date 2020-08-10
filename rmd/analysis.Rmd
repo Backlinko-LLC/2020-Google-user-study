@@ -67,6 +67,12 @@ knitr::knit_hooks$set(inline = function(x) {
 Sys.setlocale("LC_TIME", "C")
 ```
 
+```{r additional_packages}
+if (!requireNamespace("waffle")) install.packages("waffle")
+```
+
+
+
 ```{r prep}
 ## packages
 library(tidyverse)
@@ -74,8 +80,8 @@ library(tidytext)
 library(colorspace)
 library(sf)
 library(maps)
-library(albersusa)
-library(rgeocodio)
+library(albersusa) # remotes::install_github("hrbrmstr/albersusa")
+library(rgeocodio) # remotes::install_github("hrbrmstr/rgeocodio")
 library(geojsonio)
 library(rgeos)
 library(ggwordcloud)
@@ -208,14 +214,613 @@ pos_cols <- colfunc(10)
 ```
 
 
-```{r saving plots}
+```{r saving plots, eval = FALSE}
 #saving plots function example
 
-if(save == T){
+if (save == T){
   ggsave(here::here("plots", "1_1_jobs_word.pdf"), width = 12, height = 11, device = cairo_pdf)
 
 ```
 
 
 # 0. Data
+
+## Read our fetched data from google sheets
+
+```{r}
+sheets <- readRDS(here::here("proc_data/fetched_data.RDS"))
+```
+
+## tidy the data into one clean table
+
+Check consistency of column names
+
+```{r}
+name_summary <- 
+  sheets %>% 
+  map_dfr(~ tibble(nm = colnames(.)), .id = "sheet_name") %>%
+  spread(nm, nm) %>%
+  mutate_at(-1, ~ !is.na(.))
+
+inconsistent_cols <- Filter(Negate(all), name_summary[-1])
+
+# show columns that are not on every question
+inconsistent_cols
+```
+
+We need to fix typos and harmonise some names, we also remove the col "..19" as it's just an unnamed empty column.
+
+```{r}
+for (nm in names(sheets)) {
+  sheets[[nm]][["...19"]] <- NULL
+  names(sheets[[nm]]) <- sub("organis ", "organic ", names(sheets[[nm]]))
+  names(sheets[[nm]]) <- sub("different ULRs/pages", "pages", names(sheets[[nm]]))
+}
+
+# now we try again
+name_summary <- 
+  sheets %>% 
+  map_dfr(~ tibble(nm = colnames(.)), .id = "sheet_name") %>%
+  spread(nm, nm) %>%
+  mutate_at(-1, ~ !is.na(.))
+
+inconsistent_cols <- Filter(Negate(all), name_summary[-1])
+if (ncol(inconsistent_cols)) stop("we still have inconsistent column names")
+```
+
+Now that we have consistent column names, we must ensure we have consistent type.
+
+```{r}
+type_summary <- 
+  sheets %>% 
+  map_dfr(summarize_all, typeof, .id = "sheet_name")
+
+inconsistent_cols <- Filter(function(x) n_distinct(x) != 1, type_summary[-1])
+
+if (ncol(inconsistent_cols)) stop("we have inconsistent columns types")
+```
+
+We can now concatenate the data of all questions in a single table
+
+```{r}
+full_data <- bind_rows(sheets, .id = "question")
+# remove row containing only NAs appart from é first columns
+full_data <- full_data[rowSums(is.na(full_data)) != ncol(full_data) - 2,]
+# convert Y/N/y/n to TRUE/FALSE
+full_data <- modify_if(full_data, ~all(tolower(unique(.)) %in% c("y","n")), ~ tolower(.) == "y")
+```
+
+We observe that item "If clicked on Google Maps/local listing, did they click on 
+one of the first three listings?" was assigned "N" when it is not relevant 
+(no click on google map listing) so we fix by setting those to `NA`.
+
+```{r}
+full_data[["If clicked on Google Maps/local listing, did they click on one of the first three listings?"]] <- 
+  ifelse(full_data[["Clicks on Google Maps/local listings"]],
+         full_data[["If clicked on Google Maps/local listing, did they click on one of the first three listings?"]],
+         NA)
+
+saveRDS(full_data, here::here("proc_data/clean_data.RDS"))
+```
+
+# 1. Raw analysis
+
+We go through all items and drive out key insights.
+
+```{r}
+plots <- list()
+```
+
+
+<!-- ## logical variables -->
+
+<!-- percentage of use by question and total -->
+
+<!-- ```{r} -->
+<!-- lgl_by_q <- full_data %>% -->
+<!--   group_by(question) %>% -->
+<!--   summarize_if(is.logical, ~  100*mean(., na.rm = TRUE)) -->
+
+<!-- lgl_by_q -->
+
+<!-- lgl_by_q %>% -->
+<!--   summarize_if(is.numeric, ~  mean(., na.rm = TRUE)) -->
+<!-- #  -->
+<!-- full_data %>% -->
+<!--   summarize_if(is.logical, ~  100*mean(., na.rm = TRUE)) -->
+<!-- ``` -->
+
+<!-- We showed two aggregated summaries here, one is averaged over the questions,  -->
+<!-- and one is averaged over individual observations. They amount to the same in -->
+<!-- the 2 former cases, not so much in the last one. I'm not convinced that the  -->
+<!-- question "If clicked on Google Maps/local listing, did they click on one of the first three listings?" -->
+<!-- should be used as it seems to suffer from low sample size. -->
+
+## When typing the search query, did they select one of the suggested searches? (Y/N)
+
+```{r}
+item <- "When typing the search query, did they select one of the suggested searches? (Y/N)"
+if (names(full_data)[[3]] != item)
+  stop("wrong order of columns")
+
+plots[[item]] <- full_data %>%
+  group_by(question) %>%
+  summarize_at(item, ~100*mean(.)) %>%
+  arrange_at(item) %>%
+  mutate(fill = "a") %>%
+  bind_rows(summarise_at(., 2, mean) %>% mutate(question = "Overall", fill = "b")) %>%
+  mutate(question = factor(question, question)) %>%
+  ggplot() +
+  geom_col(aes(
+    question, 
+    !!sym(item),
+    fill = fill)) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 30, hjust = 1)) +
+  ggtitle(item) +
+  labs(x = "", y = "% of users who selected a suggestion")
+
+plots[[item]]
+```
+
+## Seconds to first click (use check time stamping on video)
+
+```{r}
+item <- "Seconds to first click (use check time stamping on video)"
+if (names(full_data)[[4]] != item)
+  stop("wrong order of columns")
+
+full_data %>%
+  group_by_at(4) %>%
+  summarize(n = n()) %>%
+  ggplot(aes(!!sym(item), n)) +
+  geom_point() +
+  geom_line() +
+  ggtitle("raw chart")
+```
+
+```{r}
+plot_data <- full_data %>%
+  group_by_at(4) %>%
+  summarize(pct = n()/nrow(.)) %>%
+  mutate_at("pct", cumsum) 
+
+# quantile data with labels
+q_data = tibble(
+    q = quantile(full_data[[item]], c(.25,.5,.75)), 
+    x = approx(plot_data$pct, plot_data[[item]], xout = c(.25,.5,.75))$y,
+    y = c(.25,.50,.75),
+    lab = sprintf("%s%% click before %s sec", y*100, q))
+
+plots[[item]] <- plot_data %>%
+  ggplot(aes(!!sym(item), pct))  + 
+  geom_line() +
+  coord_cartesian(xlim = c(0,50)) + 
+  ggtitle("Time to first click") +
+  labs(x = "time (seconds)", y = "% of users who click before time") +
+  geom_point(aes(x,y), data =q_data, size = 4) +
+  geom_text(aes(x,y, label = lab), data = q_data, hjust = 0, nudge_x = 3) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1))
+
+plots[[item]]
+```
+
+## Did they scroll to the end of the Google Search Page (Y/N)?
+
+```{r}
+item <- "Did they scroll to the end of the Google Search Page (Y/N)?"
+if (names(full_data)[[5]] != item)
+  stop("wrong order of columns")
+
+plots[[item]] <- full_data %>%
+  group_by(question) %>%
+  summarize_at(item, ~100*mean(.)) %>%
+  arrange_at(item) %>%
+  mutate(fill = "a") %>%
+  bind_rows(summarise_at(., 2, mean) %>% mutate(question = "Overall", fill = "b")) %>%
+  mutate(question = factor(question, question)) %>%
+  ggplot() +
+  geom_col(aes(
+    question, 
+    !!sym(item),
+    fill = fill)) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 30, hjust = 1)) +
+  ggtitle(item) +
+  labs(x = "", y = "% of users who scrolled to the bottom")
+plots[[item]]
+```
+
+## Times changed/modified search query
+
+
+```{r}
+item <- "Times changed/modified search query"
+if (names(full_data)[[6]] != item)
+  stop("wrong order of columns")
+
+table(full_data[[6]])
+
+plots[[item]] <- full_data %>%
+  transmute_at(item, ~ifelse(.>1, "2+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of changes", y = "% of users")
+
+plots[[item]]
+```
+
+## Times searcher clicks a result, then bounces back to the search results page and chooses a different result
+
+```{r}
+item <- "Times searcher clicks a result, then bounces back to the search results page and chooses a different result"
+table(full_data[[7]])
+```
+
+```{r}
+plots[[item]] <- full_data %>%
+  transmute_at(item, ~ifelse(.>1, "2+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of clicks followed by bounces", y = "% of users")
+
+plots[[item]]
+```
+
+## Number of pages visited
+
+```{r}
+item <- "Number of pages visited"
+table(full_data[[item]])
+```
+
+```{r}
+plots[[item]] <- full_data %>%
+  transmute_at(item, ~ifelse(.>=4, "4+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of pages", y = "% of users")
+
+plots[[item]]
+```
+
+## Clicks on organic search results
+
+```{r}
+item <- "Clicks on organic search results"
+table(full_data[[item]])
+```
+
+```{r}
+plots[[item]] <-
+  full_data %>%
+  transmute_at(item, ~ifelse(.>=3, "3+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of clicks", y = "% of users")
+
+plots[[item]]
+```
+
+
+## Clicks on Google AdWords/paid listings
+
+```{r}
+item <- "Clicks on Google AdWords/paid listings"
+table(full_data[[item]])
+```
+
+```{r}
+plots[[item]] <-
+  full_data %>%
+  transmute_at(item, ~ifelse(.>=2, "2+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of clicks", y = "% of users")
+
+plots[[item]] 
+```
+
+
+
+
+## Clicks on video results
+
+```{r}
+item <- "Clicks on video results"
+table(full_data[[item]])
+```
+
+```{r}
+plots[[item]] <-
+  full_data %>%
+  transmute_at(item, ~ifelse(.>=2, "2+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of clicks", y = "% of users")
+
+plots[[item]] 
+```
+
+## Clicks on Google Maps/local listings
+
+```{r}
+item <- "Clicks on Google Maps/local listings"
+table(full_data[[item]])
+```
+
+```{r}
+plots[[item]] <-
+  full_data %>%
+  transmute_at(item, ~ifelse(.>=2, "2+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of clicks", y = "% of users")
+
+plots[[item]]
+```
+
+
+## If clicked on Google Maps/local listing, did they click on one of the first three listings?
+
+```{r}
+item <- "If clicked on Google Maps/local listing, did they click on one of the first three listings?"
+table(full_data[[item]], full_data[["question"]], useNA = "always")
+```
+
+```{r}
+full_data %>%
+  group_by(question) %>%
+  summarize(clickers = sum(`Clicks on Google Maps/local listings` != 0), first3 = 100*mean(!!sym(item), na.rm = TRUE))
+
+full_data %>%
+  summarize(clickers = sum(`Clicks on Google Maps/local listings` != 0), first3 = 100*mean(!!sym(item), na.rm = TRUE))
+```
+
+We don't have reliable numbers here for any conclusion
+
+## Clicks on Image blocks
+
+```{r}
+item <- "Clicks on Image blocks"
+table(full_data[[item]], useNA = "always")
+```
+
+```{r}
+plots[[item]] <-
+  full_data %>%
+  transmute_at(item, ~ifelse(.>=1, "1+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of clicks", y = "% of users")
+
+plots[[item]]
+```
+
+Here let's make sure that the instruction and measurement were ok because number
+is really low
+
+## Clicks on Google Shopping results
+
+```{r}
+item <- "Clicks on Google Shopping results"
+table(full_data[[item]], useNA = "always")
+```
+
+```{r}
+plots[[item]] <-
+  full_data %>%
+  transmute_at(item, ~ifelse(.>=1, "1+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of clicks", y = "% of users")
+
+plots[[item]]
+```
+
+
+## Clicks "people also ask" box
+
+```{r}
+item <- "Clicks \"people also ask\" box"
+table(full_data[[item]], useNA = "always")
+```
+
+```{r}
+plots[[item]] <-
+  full_data %>%
+  transmute_at(item, ~ifelse(.>=1, "1+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of clicks", y = "% of users")
+
+plots[[item]]
+```
+
+
+## Clicks to 2nd+ Google page
+
+```{r}
+item <- "Clicks to 2nd+ Google page"
+table(full_data[[item]], useNA = "always")
+```
+
+```{r}
+plots[[item]] <-
+  full_data %>%
+  transmute_at(item, ~ifelse(.>=1, "1+", .)) %>%
+  group_by_at(item) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(n = n/sum(n)) %>%
+  na.omit() %>%
+  ggplot(aes(!!sym(item),n)) +
+  geom_col() +
+  ggtitle(item) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "number of clicks", y = "% of users")
+
+plots[[item]] 
+```
+
+
+## Seconds to complete search task
+
+```{r}
+item <- "Seconds to complete search task"
+
+full_data %>%
+  group_by_at(item) %>%
+  summarize(n = n()) %>%
+  ggplot(aes(!!sym(item), n)) +
+  geom_point() +
+  geom_line() +
+  ggtitle("raw chart")
+```
+
+```{r}
+# quantile data with labels
+
+plot_data <- full_data %>%
+  group_by_at(item) %>%
+  summarize(pct = n()/nrow(.)) %>%
+  mutate_at("pct", cumsum) 
+
+q_data = tibble(
+    q = quantile(full_data[[item]], c(.25,.5,.75)), 
+    x = approx(plot_data$pct, plot_data[[item]], xout = c(.25,.5,.75))$y,
+    y = c(.25,.50,.75),
+    lab = sprintf("%s%% complete before %s sec", y*100, q))
+
+
+plots[[item]] <-
+  plot_data %>%
+  ggplot(aes(!!sym(item), pct))  + 
+  geom_line() +
+  coord_cartesian(xlim = c(0,300)) + 
+  ggtitle("Time to complete a search task") +
+  labs(x = "time (seconds)", y = "% of users who complete the task before time") +
+  geom_point(aes(x, y), data =q_data, size = 4) +
+  geom_text(aes(x, y, label = lab), data = q_data, hjust = 0, nudge_x = 3) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) 
+
+plots[[item]]
+```
+
+
+## Total Clicks
+
+```{r}
+item <- "Total Clicks"
+table(full_data[[item]], useNA = "always")
+```
+
+```{r}
+# quantile data with labels
+
+
+plot_data <- full_data %>%
+  group_by_at(item) %>%
+  summarize(pct = n()/nrow(.)) %>%
+  mutate_at("pct", cumsum) 
+
+q_data = tibble(
+    q = quantile(full_data[[item]], c(.25,.5,.75)), 
+    x = approx(plot_data$pct, plot_data[[item]], xout = c(.25,.5,.75))$y,
+    y = c(.25,.50,.75),
+    lab = sprintf("%s%% click less than %s times", y*100, q))
+
+plots[[item]] <-
+  plot_data %>%
+  ggplot(aes(!!sym(item), pct))  + 
+  geom_line() +
+  #geom_point() +
+  coord_cartesian(xlim = c(0,50)) + 
+  ggtitle("Total number of clicks") +
+  labs(x = "number of clicks", y = "% of users who clicked less than the given numeber of clicks") +
+  geom_point(aes(x, y), data = q_data, size = 4) +
+  geom_text(aes(x, y, label = lab), data = q_data, hjust = 0, nudge_x = 3) +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) 
+
+plots[[item]]
+```
+
+
+# 2. Save Results
+
+```{r}
+saveRDS(plots, here::here("proc_data/plots.RDS"))
+```
 
