@@ -65,13 +65,8 @@ knitr::knit_hooks$set(inline = function(x) {
 })
 
 Sys.setlocale("LC_TIME", "C")
+extrafont::loadfonts(device = "win")
 ```
-
-```{r additional_packages}
-if (!requireNamespace("waffle")) install.packages("waffle")
-```
-
-
 
 ```{r prep}
 ## packages
@@ -97,12 +92,15 @@ save <- TRUE
 dpi <- 750
 
 ## font
+extrafont::loadfonts(device = "win", quiet = TRUE)
 font_add_google("Montserrat", "Montserrat")
-font_add_google("Overpass", "Overpass")
-font_add_google("Overpass Mono", "Overpass Mono")
+# font_add_google("Overpass", "Overpass")
+# font_add_google("Overpass Mono", "Overpass Mono")
 
 ## theme updates
+#theme_set(ggthemes::theme_clean(base_size = 15))
 theme_set(ggthemes::theme_clean(base_size = 15, base_family = "Montserrat"))
+
 
 theme_update(plot.margin = margin(30, 30, 30, 30),
              plot.background = element_rect(color = "white",
@@ -113,7 +111,7 @@ theme_update(plot.margin = margin(30, 30, 30, 30),
                                        hjust = .5,
                                        margin = margin(10, 0, 25, 0)),
              plot.title.position = "plot",
-             plot.caption = element_text(color = "grey40", 
+             plot.caption = element_text(color = "grey40",
                                          size = 9,
                                          margin = margin(20, 0, -20, 0)),
              plot.caption.position = "plot",
@@ -213,413 +211,367 @@ colfunc <- colorRampPalette(c(bl_col, "#bce2d5"))
 pos_cols <- colfunc(10)
 ```
 
-
-```{r saving plots, eval = FALSE}
-#saving plots function example
-
-if (save == T){
-  ggsave(here::here("plots", "1_1_jobs_word.pdf"), width = 12, height = 11, device = cairo_pdf)
-
-```
-
-
 # 0. Data
 
-## Read our fetched data from google sheets
+## load
 
 ```{r}
-sheets <- readRDS(here::here("proc_data/fetched_data.RDS"))
+full_data <- readRDS(here::here("proc_data/clean_data.RDS"))
 ```
 
-## tidy the data into one clean table
 
-Check consistency of column names
+## define descriptions for the different questions
 
 ```{r}
-name_summary <- 
-  sheets %>% 
-  map_dfr(~ tibble(nm = colnames(.)), .id = "sheet_name") %>%
-  spread(nm, nm) %>%
-  mutate_at(-1, ~ !is.na(.))
-
-inconsistent_cols <- Filter(Negate(all), name_summary[-1])
-
-# show columns that are not on every question
-inconsistent_cols
+# Commercial_1_pyhsical: find a car phone holder (assumption: Google shopping results)
+# Commercial_2_service: find a credit card (assumptions: affiliate articles)
+# Local: find a car accident lawyer (assumptions: ads)
+# Informational_1: find how to cut your own hair (assumptions: videos)
+# Informational_2: find how to treat back pain (assumptions: in-depth articles)
+# Transactional: find supplements that may help with lower back pain
+# Commercial_3_service: buy groceries online in your local area
+question_descs <- c(
+  Q1_Commercial_1_pyhsical = "find a car phone holder",
+  Q2_Commercial_2_service = "find a credit card",
+  Q3_Local = "find a car accident lawyer",
+  Q4_Informational_1_video = "find how to cut your own hair",
+  Q5_Informational_2_indeepth = "find how to treat back pain",
+  Q6_transactional = "find supplements to treat back pain",
+  Q7_Commercial_3_service = "buy groceries online"
+)
 ```
 
-We need to fix typos and harmonise some names, we also remove the col "..19" as it's just an unnamed empty column.
-
-```{r}
-for (nm in names(sheets)) {
-  sheets[[nm]][["...19"]] <- NULL
-  names(sheets[[nm]]) <- sub("organis ", "organic ", names(sheets[[nm]]))
-  names(sheets[[nm]]) <- sub("different ULRs/pages", "pages", names(sheets[[nm]]))
-}
-
-# now we try again
-name_summary <- 
-  sheets %>% 
-  map_dfr(~ tibble(nm = colnames(.)), .id = "sheet_name") %>%
-  spread(nm, nm) %>%
-  mutate_at(-1, ~ !is.na(.))
-
-inconsistent_cols <- Filter(Negate(all), name_summary[-1])
-if (ncol(inconsistent_cols)) stop("we still have inconsistent column names")
-```
-
-Now that we have consistent column names, we must ensure we have consistent type.
-
-```{r}
-type_summary <- 
-  sheets %>% 
-  map_dfr(summarize_all, typeof, .id = "sheet_name")
-
-inconsistent_cols <- Filter(function(x) n_distinct(x) != 1, type_summary[-1])
-
-if (ncol(inconsistent_cols)) stop("we have inconsistent columns types")
-```
-
-We can now concatenate the data of all questions in a single table
-
-```{r}
-full_data <- bind_rows(sheets, .id = "question")
-# remove row containing only NAs appart from é first columns
-full_data <- full_data[rowSums(is.na(full_data)) != ncol(full_data) - 2,]
-# convert Y/N/y/n to TRUE/FALSE
-full_data <- modify_if(full_data, ~all(tolower(unique(.)) %in% c("y","n")), ~ tolower(.) == "y")
-```
-
-We observe that item "If clicked on Google Maps/local listing, did they click on 
-one of the first three listings?" was assigned "N" when it is not relevant 
-(no click on google map listing) so we fix by setting those to `NA`.
-
-```{r}
-full_data[["If clicked on Google Maps/local listing, did they click on one of the first three listings?"]] <- 
-  ifelse(full_data[["Clicks on Google Maps/local listings"]],
-         full_data[["If clicked on Google Maps/local listing, did they click on one of the first three listings?"]],
-         NA)
-
-saveRDS(full_data, here::here("proc_data/clean_data.RDS"))
-```
 
 # 1. Raw analysis
 
-We go through all items and drive out key insights.
+We go through all items and drive out key insights. First w define the plotting
+functions that we'll use
 
 ```{r}
 plots <- list()
-```
 
+save_plot <- function(plot, item) {
+  if (save)
+    #ggsave(here::here("plots", paste0(make.names(item), ".pdf")), plots[[item]], width = 12, height = 11, device = cairo_pdf)
+    ggsave(here::here("plots", paste0(make.names(item), ".png")), plot, width = 12, height = 11)
+}
 
-<!-- ## logical variables -->
-
-<!-- percentage of use by question and total -->
-
-<!-- ```{r} -->
-<!-- lgl_by_q <- full_data %>% -->
-<!--   group_by(question) %>% -->
-<!--   summarize_if(is.logical, ~  100*mean(., na.rm = TRUE)) -->
-
-<!-- lgl_by_q -->
-
-<!-- lgl_by_q %>% -->
-<!--   summarize_if(is.numeric, ~  mean(., na.rm = TRUE)) -->
-<!-- #  -->
-<!-- full_data %>% -->
-<!--   summarize_if(is.logical, ~  100*mean(., na.rm = TRUE)) -->
-<!-- ``` -->
-
-<!-- We showed two aggregated summaries here, one is averaged over the questions,  -->
-<!-- and one is averaged over individual observations. They amount to the same in -->
-<!-- the 2 former cases, not so much in the last one. I'm not convinced that the  -->
-<!-- question "If clicked on Google Maps/local listing, did they click on one of the first three listings?" -->
-<!-- should be used as it seems to suffer from low sample size. -->
-
-## When typing the search query, did they select one of the suggested searches? (Y/N)
-
-```{r}
-item <- "When typing the search query, did they select one of the suggested searches? (Y/N)"
-if (names(full_data)[[3]] != item)
-  stop("wrong order of columns")
-
-plots[[item]] <- full_data %>%
-  group_by(question) %>%
-  summarize_at(item, ~100*mean(.)) %>%
-  arrange_at(item) %>%
-  mutate(fill = "a") %>%
-  bind_rows(summarise_at(., 2, mean) %>% mutate(question = "Overall", fill = "b")) %>%
-  mutate(question = factor(question, question)) %>%
-  ggplot() +
-  geom_col(aes(
-    question, 
-    !!sym(item),
-    fill = fill)) +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_text(angle = 30, hjust = 1)) +
-  ggtitle(item) +
-  labs(x = "", y = "% of users who selected a suggestion")
-
-plots[[item]]
-```
-
-## Seconds to first click (use check time stamping on video)
-
-```{r}
-item <- "Seconds to first click (use check time stamping on video)"
-if (names(full_data)[[4]] != item)
-  stop("wrong order of columns")
-
-full_data %>%
-  group_by_at(4) %>%
-  summarize(n = n()) %>%
-  ggplot(aes(!!sym(item), n)) +
-  geom_point() +
-  geom_line() +
-  ggtitle("raw chart")
-```
-
-```{r}
-plot_data <- full_data %>%
-  group_by_at(4) %>%
-  summarize(pct = n()/nrow(.)) %>%
-  mutate_at("pct", cumsum) 
-
-# quantile data with labels
-q_data = tibble(
+lollipop_chart <- function(full_data, item, title, xlab, nudge_x = 0, percent = TRUE, fun = ~mean(., na.rm = TRUE)) {
+  summary_by_q <-
+    full_data %>%
+    mutate(question = question_descs[question]) %>%
+    group_by(question) %>%
+    summarize_at(item, fun) %>%
+    mutate(group = "a")
+  
+  summary_overall <-
+    full_data %>%
+    summarize_at(item, fun) %>%
+    mutate(question = "overall", group = "b")
+  
+  summary_all <- 
+    bind_rows(summary_by_q, summary_overall) %>%
+    arrange_at(item) %>%
+    mutate(question = factor(question, question)) # sort factors
+  
+  ggplot(summary_all) +
+    geom_segment(aes(y= question, yend = question, x = 0, xend = !!sym(item),
+                     color = group), size = 2) + 
+    geom_point(aes(x = !!sym(item), y = question, color = group), size = 7) +
+    geom_text(data = summary_overall,
+              aes(!!sym(item), question, label = if(percent) scales::percent(!!sym(item), 1) else round(!!sym(item), 2)), color = "black", 
+              hjust = 0, nudge_x = nudge_x) +
+    labs(x = xlab, y = "") +
+    scale_color_manual(values = c("lightgreen","lightblue")) +
+    {if (percent) scale_x_continuous(labels = scales::percent)} +
+    ggtitle(title) +
+    theme(legend.position = "none")
+}
+  
+quantile_chart <- function(full_data, item, title, xlab, ylab, qlab, meanlab, xmax, nudge_x){
+  plot_data <- full_data %>%
+    group_by_at(item) %>%
+    summarize(pct = n()/nrow(.)) %>%
+    mutate_at("pct", cumsum) 
+  
+  x_mean <- mean(full_data[[item]])
+  
+  mean_data <- tibble(
+    x = mean(full_data[[item]]),
+    y = approx(plot_data[[item]], plot_data$pct, xout = x_mean)$y,
+    lab = sprintf(meanlab, round(x_mean))
+  )
+  
+  q_data = tibble(
     q = quantile(full_data[[item]], c(.25,.5,.75)), 
     x = approx(plot_data$pct, plot_data[[item]], xout = c(.25,.5,.75))$y,
     y = c(.25,.50,.75),
-    lab = sprintf("%s%% click before %s sec", y*100, q))
+    lab = sprintf(qlab, y*100, q))
+  
+  plot_data %>%
+    ggplot(aes(!!sym(item), pct))  + 
+    geom_line() +
+    coord_cartesian(xlim = c(0,xmax)) + 
+    ggtitle(title) +
+    labs(x = xlab, y = ylab) +
+    geom_point(aes(x,y), data =q_data, size = 4) +
+    geom_point(aes(x,y), data = mean_data, color = "blue", size = 4) +
+    geom_text(aes(x,y, label = lab), data = q_data, hjust = 0, nudge_x = nudge_x) +
+    geom_text(aes(x,y, label = lab), data = mean_data, hjust = 0, nudge_y = -0.05) +
+    scale_y_continuous(labels = function(x) scales::percent(x,1))
+}
 
-plots[[item]] <- plot_data %>%
-  ggplot(aes(!!sym(item), pct))  + 
-  geom_line() +
-  coord_cartesian(xlim = c(0,50)) + 
-  ggtitle("Time to first click") +
-  labs(x = "time (seconds)", y = "% of users who click before time") +
-  geom_point(aes(x,y), data =q_data, size = 4) +
-  geom_text(aes(x,y, label = lab), data = q_data, hjust = 0, nudge_x = 3) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1))
-
-plots[[item]]
-```
-
-## Did they scroll to the end of the Google Search Page (Y/N)?
-
-```{r}
-item <- "Did they scroll to the end of the Google Search Page (Y/N)?"
-if (names(full_data)[[5]] != item)
-  stop("wrong order of columns")
-
-plots[[item]] <- full_data %>%
-  group_by(question) %>%
-  summarize_at(item, ~100*mean(.)) %>%
-  arrange_at(item) %>%
-  mutate(fill = "a") %>%
-  bind_rows(summarise_at(., 2, mean) %>% mutate(question = "Overall", fill = "b")) %>%
-  mutate(question = factor(question, question)) %>%
-  ggplot() +
-  geom_col(aes(
-    question, 
-    !!sym(item),
-    fill = fill)) +
-  theme(
-    legend.position = "none",
-    axis.text.x = element_text(angle = 30, hjust = 1)) +
-  ggtitle(item) +
-  labs(x = "", y = "% of users who scrolled to the bottom")
-plots[[item]]
-```
-
-## Times changed/modified search query
-
-
-```{r}
-item <- "Times changed/modified search query"
-if (names(full_data)[[6]] != item)
-  stop("wrong order of columns")
-
-table(full_data[[6]])
-
-plots[[item]] <- full_data %>%
-  transmute_at(item, ~ifelse(.>1, "2+", .)) %>%
+bar_chart <- function(full_data, item,title, xlab, ylab, threshold) {
+  full_data %>%
+  transmute_at(item, ~ifelse(.>= threshold, paste0(threshold, "+"), .)) %>%
   group_by_at(item) %>%
   count() %>%
   ungroup() %>%
   mutate(n = n/sum(n)) %>%
   na.omit() %>%
   ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
+  geom_col(fill = "lightgreen",color = "darkgreen") +
+  geom_text(aes(label = scales::percent(n,1)), vjust = 0, nudge_y = .02) +
+  ggtitle(title) +
   scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of changes", y = "% of users")
-
-plots[[item]]
+  labs(x = xlab, y = ylab)
+}
 ```
 
-## Times searcher clicks a result, then bounces back to the search results page and chooses a different result
+## 1.1 When typing the search query, did they select one of the suggested searches? (Y/N)
+
+```{r}
+item <- "When typing the search query, did they select one of the suggested searches? (Y/N)"
+
+plots[[item]] <- lollipop_chart(
+  full_data, item,
+  "Suggested searches are used 1 time in 4", "% of users who selected a suggestion",
+  nudge_x = .02, fun = ~mean(. != 0, na.rm = TRUE))
+
+save_plot(plots[[item]], item)
+```
+
+## 1.2 Seconds to first click (use check time stamping on video)
+
+```{r}
+item <- "Seconds to first click (use check time stamping on video)"
+
+# full_data %>%
+#   group_by_at(4) %>%
+#   summarize(n = n()) %>%
+#   ggplot(aes(!!sym(item), n)) +
+#   geom_point() +
+#   geom_line() +
+#   ggtitle("raw chart")
+
+plots[[item]] <- quantile_chart(
+  full_data, item,
+  "The average user clicks first after 15 seconds",
+  "time (seconds)", "% of users who click before time",
+  meanlab = "Average: %s sec", qlab = "%s%% click before %s sec",
+  xmax = 50, nudge_x = 3)
+
+save_plot(plots[[item]], item)
+
+item2 <- paste0(item,"_2")
+
+plots[[item2]] <- lollipop_chart(
+  full_data, item,
+  "The average time to first click spans from 10 to 25 seconds", "time (seconds)",
+  nudge_x = 1, percent = FALSE)
+
+save_plot(plots[[item2]], item2)
+```
+
+## 1.3 Scrolling to the end of the search page
+
+```{r}
+item <- "Did they scroll to the end of the Google Search Page (Y/N)?"
+
+plots[[item]] <- lollipop_chart(
+  full_data, item,
+  "9% of users reach the end of the page,\nbut it depends a lot on the query", 
+  "% of users who scrolled to the bottom", nudge_x = .01)
+plots[[item]]
+
+save_plot(plots[[item]], item)
+```
+
+## 1.4 Times changed/modified search query
+
+```{r}
+item <- "Times changed/modified search query"
+
+table(full_data[[6]])
+
+plots[[item]] <-  bar_chart(
+  full_data, item,
+  "85% of the time, users stick to their first choice of query",
+   "number of changes", "% of users", 2)
+save_plot(plots[[item]], item)
+
+item2 <- paste0(item,"_2")
+plots[[item2]] <- lollipop_chart(
+  full_data, item,
+  "Percentage of users who modify their query", "", 
+  fun = ~mean(. != 0, na.rm = TRUE),
+  nudge_x = .02)
+
+save_plot(plots[[item2]], item2)
+```
+
+## 1.5 Times searcher clicks a result, then bounces back to the search results page and chooses a different result
 
 ```{r}
 item <- "Times searcher clicks a result, then bounces back to the search results page and chooses a different result"
 table(full_data[[7]])
+
+plots[[item]] <- bar_chart(
+  full_data, item,
+  "", "number of clicks followed by bounces",  "% of users", 2)
+
+save_plot(plots[[item]], item)
+
+item2 <- paste0(item,"_2")
+plots[[item2]] <- lollipop_chart(
+  full_data, item,
+  "10% to 30% of users bounce at least once", "% of users who bounce at least once", 
+  fun = ~mean(. != 0, na.rm = TRUE), nudge_x = .02)
+
+save_plot(plots[[item2]], item2)
 ```
 
-```{r}
-plots[[item]] <- full_data %>%
-  transmute_at(item, ~ifelse(.>1, "2+", .)) %>%
-  group_by_at(item) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(n = n/sum(n)) %>%
-  na.omit() %>%
-  ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of clicks followed by bounces", y = "% of users")
-
-plots[[item]]
-```
-
-## Number of pages visited
+## 1.6 Number of pages visited
 
 ```{r}
 item <- "Number of pages visited"
 table(full_data[[item]])
+
+plots[[item]] <- 
+  bar_chart(
+    full_data, item,
+    "Most users visit only one page", "number of pages visited", 
+    "% of users", threshold = 4)
+
+save_plot(plots[[item]], item)
+
+item2 <- paste0(item,"_2")
+plots[[item2]] <- lollipop_chart(
+    full_data, item,
+    "Average number of visited pages", "", 
+    nudge_x = .1,
+    percent = FALSE)
+
+save_plot(plots[[item2]], item2)
 ```
 
-```{r}
-plots[[item]] <- full_data %>%
-  transmute_at(item, ~ifelse(.>=4, "4+", .)) %>%
-  group_by_at(item) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(n = n/sum(n)) %>%
-  na.omit() %>%
-  ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of pages", y = "% of users")
-
-plots[[item]]
-```
-
-## Clicks on organic search results
+## 1.7 Clicks on organic search results
 
 ```{r}
 item <- "Clicks on organic search results"
 table(full_data[[item]])
+
+plots[[item]] <- bar_chart(
+  full_data, item,
+  "Clicks on organic search results",
+  "number of clicks", "% of users",
+  threshold = 3)
+
+save_plot(plots[[item]], item)
+
+item2 <- paste0(item,"_2")
+plots[[item2]] <- lollipop_chart(
+  full_data, item,
+  "Percentage of users who click on organic search results", "", 
+  nudge_x = .1,
+  percent = TRUE,
+  fun = ~mean(. != 0, na.rm = TRUE))
+
+save_plot(plots[[item2]], item2)
 ```
 
-```{r}
-plots[[item]] <-
-  full_data %>%
-  transmute_at(item, ~ifelse(.>=3, "3+", .)) %>%
-  group_by_at(item) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(n = n/sum(n)) %>%
-  na.omit() %>%
-  ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of clicks", y = "% of users")
 
-plots[[item]]
-```
-
-
-## Clicks on Google AdWords/paid listings
+## 1.8 Clicks on Google AdWords/paid listings
 
 ```{r}
 item <- "Clicks on Google AdWords/paid listings"
 table(full_data[[item]])
+
+plots[[item]] <- bar_chart(
+  full_data, item,
+  "Clicks on Google AdWords and paid listings",
+  "number of clicks", "% of users", 2)
+
+save_plot(plots[[item]], item)
+
+item2 <- paste0(item,"_2")
+plots[[item2]] <- lollipop_chart(
+  full_data, item,
+  "Percentage of users who click on Google AdWords or paid listings", "", 
+  nudge_x = .02,
+  percent = TRUE,
+  fun = ~mean(. != 0, na.rm = TRUE))
+
+save_plot(plots[[item2]], item2)
 ```
 
-```{r}
-plots[[item]] <-
-  full_data %>%
-  transmute_at(item, ~ifelse(.>=2, "2+", .)) %>%
-  group_by_at(item) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(n = n/sum(n)) %>%
-  na.omit() %>%
-  ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of clicks", y = "% of users")
 
-plots[[item]] 
-```
-
-
-
-
-## Clicks on video results
+## 1.9 Clicks on video results
 
 ```{r}
 item <- "Clicks on video results"
 table(full_data[[item]])
+
+plots[[item]] <- bar_chart(
+  full_data, item,
+  "Clicks on video results",  "number of clicks", "% of users", 2)
+save_plot(plots[[item]], item)
+
+item2 <- paste0(item,"_2")
+plots[[item2]] <- lollipop_chart(
+  full_data, item,
+  "Users are much more likely to click on video results\nif they look for how tocut one's hair",
+  "% of users who click on video results", 
+  nudge_x = .02,
+  percent = TRUE,
+  fun = ~mean(. != 0, na.rm = TRUE))
+
+save_plot(plots[[item2]], item2)
 ```
 
-```{r}
-plots[[item]] <-
-  full_data %>%
-  transmute_at(item, ~ifelse(.>=2, "2+", .)) %>%
-  group_by_at(item) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(n = n/sum(n)) %>%
-  na.omit() %>%
-  ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of clicks", y = "% of users")
-
-plots[[item]] 
-```
-
-## Clicks on Google Maps/local listings
+## 1.10 Clicks on Google Maps/local listings
 
 ```{r}
 item <- "Clicks on Google Maps/local listings"
 table(full_data[[item]])
+
+plots[[item]] <- bar_chart(
+  full_data, item,
+  item, "number of clicks", "% of users", 2)
+
+save_plot(plots[[item]], item)
+
+item2 <- paste0(item,"_2")
+plots[[item2]] <- lollipop_chart(
+  full_data, item,
+  "Users are much more likely to click on Google Maps or local listings\nif they look for a car accident lawyer",
+  "% of users who click on Google Maps or local listings", 
+  nudge_x = .02,
+  percent = TRUE,
+  fun = ~mean(. != 0, na.rm = TRUE))
+
+save_plot(plots[[item2]], item2)
 ```
 
-```{r}
-plots[[item]] <-
-  full_data %>%
-  transmute_at(item, ~ifelse(.>=2, "2+", .)) %>%
-  group_by_at(item) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(n = n/sum(n)) %>%
-  na.omit() %>%
-  ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of clicks", y = "% of users")
 
-plots[[item]]
-```
+## 1.11 If clicked on Google Maps/local listing, did they click on one of the first three listings?
 
-
-## If clicked on Google Maps/local listing, did they click on one of the first three listings?
+No plot here, we'll share the conclusion in text
 
 ```{r}
 item <- "If clicked on Google Maps/local listing, did they click on one of the first three listings?"
 table(full_data[[item]], full_data[["question"]], useNA = "always")
-```
 
-```{r}
 full_data %>%
   group_by(question) %>%
   summarize(clickers = sum(`Clicks on Google Maps/local listings` != 0), first3 = 100*mean(!!sym(item), na.rm = TRUE))
@@ -628,111 +580,65 @@ full_data %>%
   summarize(clickers = sum(`Clicks on Google Maps/local listings` != 0), first3 = 100*mean(!!sym(item), na.rm = TRUE))
 ```
 
-We don't have reliable numbers here for any conclusion
+## 1.12 Clicks on Image blocks
 
-## Clicks on Image blocks
+We measure how often users click on image blocks and find that they click on them
+less than half a percent of the time.
+
+Note to Daniel : probably better not to include this at all
+
+better check that the instruction and measurement were ok because number
+is really low
 
 ```{r}
 item <- "Clicks on Image blocks"
 table(full_data[[item]], useNA = "always")
+scales::percent(mean(full_data[[item]] != 0, na.rm = TRUE))
 ```
 
-```{r}
-plots[[item]] <-
-  full_data %>%
-  transmute_at(item, ~ifelse(.>=1, "1+", .)) %>%
-  group_by_at(item) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(n = n/sum(n)) %>%
-  na.omit() %>%
-  ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of clicks", y = "% of users")
-
-plots[[item]]
-```
-
-Here let's make sure that the instruction and measurement were ok because number
-is really low
-
-## Clicks on Google Shopping results
+## 1.13 Clicks on Google Shopping results
 
 ```{r}
 item <- "Clicks on Google Shopping results"
 table(full_data[[item]], useNA = "always")
-```
 
-```{r}
-plots[[item]] <-
-  full_data %>%
-  transmute_at(item, ~ifelse(.>=1, "1+", .)) %>%
-  group_by_at(item) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(n = n/sum(n)) %>%
-  na.omit() %>%
-  ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of clicks", y = "% of users")
+plots[[item]] <- lollipop_chart(
+  full_data, item, 
+  "Users are more likely to click on Google Shopping results\nif they look for supplements to treat back pain", "% of users who click on Google Shopping results",
+  fun = ~ mean(.!=0, na.rm =TRUE))
 
-plots[[item]]
+save_plot(plots[[item]], item)
 ```
 
 
-## Clicks "people also ask" box
+## 1.14 Clicks "people also ask" box
 
 ```{r}
 item <- "Clicks \"people also ask\" box"
 table(full_data[[item]], useNA = "always")
+
+plots[[item]] <- lollipop_chart(
+  full_data, item, 
+  "Users are more likely to click on \"people also ask\" box\nif they look for supplements to treat back pain", "% of users who click on \"people also ask\" box",
+  fun = ~ mean(.!=0, na.rm =TRUE),
+  nudge_x = .01)
+
+save_plot(plots[[item]], item)
 ```
 
-```{r}
-plots[[item]] <-
-  full_data %>%
-  transmute_at(item, ~ifelse(.>=1, "1+", .)) %>%
-  group_by_at(item) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(n = n/sum(n)) %>%
-  na.omit() %>%
-  ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of clicks", y = "% of users")
-
-plots[[item]]
-```
-
-
-## Clicks to 2nd+ Google page
+## 1.15 Clicks to 2nd+ Google page
 
 ```{r}
 item <- "Clicks to 2nd+ Google page"
 table(full_data[[item]], useNA = "always")
-```
 
-```{r}
-plots[[item]] <-
-  full_data %>%
-  transmute_at(item, ~ifelse(.>=1, "1+", .)) %>%
-  group_by_at(item) %>%
-  count() %>%
-  ungroup() %>%
-  mutate(n = n/sum(n)) %>%
-  na.omit() %>%
-  ggplot(aes(!!sym(item),n)) +
-  geom_col() +
-  ggtitle(item) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
-  labs(x = "number of clicks", y = "% of users")
+plots[[item]] <- lollipop_chart(
+  full_data, item, 
+  "Very few user click on a further google page", "% of users who click on a further google page",
+  fun = ~ mean(.!=0, na.rm =TRUE),
+  nudge_x = .001)
 
-plots[[item]] 
+save_plot(plots[[item]], item)
 ```
 
 
@@ -741,42 +647,35 @@ plots[[item]]
 ```{r}
 item <- "Seconds to complete search task"
 
-full_data %>%
-  group_by_at(item) %>%
-  summarize(n = n()) %>%
-  ggplot(aes(!!sym(item), n)) +
-  geom_point() +
-  geom_line() +
-  ggtitle("raw chart")
-```
+# full_data %>%
+#   group_by_at(item) %>%
+#   summarize(n = n()) %>%
+#   ggplot(aes(!!sym(item), n)) +
+#   geom_point() +
+#   geom_line() +
+#   ggtitle("raw chart")
 
-```{r}
 # quantile data with labels
 
-plot_data <- full_data %>%
-  group_by_at(item) %>%
-  summarize(pct = n()/nrow(.)) %>%
-  mutate_at("pct", cumsum) 
+plots[[item]] <- quantile_chart(
+  full_data, item,
+  "Time to complete a search task",
+  "time (seconds)", "% of users who complete the task before time",
+  meanlab = "Average : %s sec", qlab = "%s%% complete before %s sec",
+  xmax = 250, nudge_x = 8
+)
 
-q_data = tibble(
-    q = quantile(full_data[[item]], c(.25,.5,.75)), 
-    x = approx(plot_data$pct, plot_data[[item]], xout = c(.25,.5,.75))$y,
-    y = c(.25,.50,.75),
-    lab = sprintf("%s%% complete before %s sec", y*100, q))
+save_plot(plots[[item]], item)
 
+item2 <- paste0(item, "_2")
+plots[[item2]] <- lollipop_chart(
+  full_data, item, 
+  "Average time to complete search task", "time (seconds)",
+  fun = ~ mean(., na.rm =TRUE),
+  percent = FALSE,
+  nudge_x = 8)
 
-plots[[item]] <-
-  plot_data %>%
-  ggplot(aes(!!sym(item), pct))  + 
-  geom_line() +
-  coord_cartesian(xlim = c(0,300)) + 
-  ggtitle("Time to complete a search task") +
-  labs(x = "time (seconds)", y = "% of users who complete the task before time") +
-  geom_point(aes(x, y), data =q_data, size = 4) +
-  geom_text(aes(x, y, label = lab), data = q_data, hjust = 0, nudge_x = 3) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) 
-
-plots[[item]]
+save_plot(plots[[item2]], item2)
 ```
 
 
@@ -785,40 +684,34 @@ plots[[item]]
 ```{r}
 item <- "Total Clicks"
 table(full_data[[item]], useNA = "always")
+
+plots[[item]] <- quantile_chart(
+  full_data, item,
+  "Total number of clicks",
+  "time (seconds)", "% of users who clicked at least this amount",
+  meanlab = "Average : %s times", qlab = "%s%% click at least %s times",
+  xmax = 30, nudge_x = 1
+)
+
+save_plot(plots[[item]], item)
+
+save_plot(plots[[item]], item)
+
+item2 <- paste0(item, "_2")
+plots[[item2]] <- lollipop_chart(
+  full_data, item, 
+  "Average total clicks", "clicks",
+  fun = ~ mean(., na.rm =TRUE),
+  percent = FALSE,
+  nudge_x = .6)
+
+save_plot(plots[[item2]], item2)
 ```
-
-```{r}
-# quantile data with labels
-
-
-plot_data <- full_data %>%
-  group_by_at(item) %>%
-  summarize(pct = n()/nrow(.)) %>%
-  mutate_at("pct", cumsum) 
-
-q_data = tibble(
-    q = quantile(full_data[[item]], c(.25,.5,.75)), 
-    x = approx(plot_data$pct, plot_data[[item]], xout = c(.25,.5,.75))$y,
-    y = c(.25,.50,.75),
-    lab = sprintf("%s%% click less than %s times", y*100, q))
-
-plots[[item]] <-
-  plot_data %>%
-  ggplot(aes(!!sym(item), pct))  + 
-  geom_line() +
-  #geom_point() +
-  coord_cartesian(xlim = c(0,50)) + 
-  ggtitle("Total number of clicks") +
-  labs(x = "number of clicks", y = "% of users who clicked less than the given numeber of clicks") +
-  geom_point(aes(x, y), data = q_data, size = 4) +
-  geom_text(aes(x, y, label = lab), data = q_data, hjust = 0, nudge_x = 3) +
-  scale_y_continuous(labels = function(x) scales::percent(x,1)) 
-
-plots[[item]]
-```
-
 
 # 2. Save Results
+
+For conveniencewe save our list of ggplot objects, though we'll directly
+use the pictures in final.Rmd.
 
 ```{r}
 saveRDS(plots, here::here("proc_data/plots.RDS"))

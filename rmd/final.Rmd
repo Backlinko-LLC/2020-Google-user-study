@@ -51,122 +51,178 @@ knitr::knit_hooks$set(inline = function(x) {
   prettyNum(x, big.mark = ",", small.mark = ",", scientific = F)
 })
 plots <- readRDS(here::here("proc_data/plots.RDS"))
+include_png <- function(item) {
+  knitr::include_graphics(
+    here::here("plots", paste0(make.names(item), ".png")))
+  } 
 ```
 
 
 # 0. Introduction
 
 
-# When typing the search query, did they select one of the suggested searches? (Y/N)
+# Use of suggested searches
 
-
-```{r}
-plots[["When typing the search query, did they select one of the suggested searches? (Y/N)"]]
-```
-
-# Seconds to first click (use check time stamping on video)
+We measure for each question what percentage of users used the search suggestion.
+We find that users use them between 18% and 23% of the time, globally 23% of the time
+on average.
 
 ```{r}
-plots[["Seconds to first click (use check time stamping on video)"]]
+item <- "When typing the search query, did they select one of the suggested searches? (Y/N)"
+include_png(item)
 ```
 
+# Time to first click (use check time stamping on video)
 
-# Did they scroll to the end of the Google Search Page (Y/N)?
+Using the video timestamps we can assess the time when users click for the first
+time. We find that the on average a user clicks first after 15 seconds and that
+half of the users click between 5 seconds and 17 seconds after getting on the page.
+
+The average time to first click, when we consider questions independently,
+varies from 10 to 25 seconds.
 
 ```{r}
-plots[["Did they scroll to the end of the Google Search Page (Y/N)?"]]
+include_png("Seconds to first click (use check time stamping on video)")
+include_png("Seconds to first click (use check time stamping on video)_2")
 ```
 
+# Scrolling to the bottom of the search page
 
-# Times changed/modified search query
+On average 9% of users reach the bottom of the page, as we can expect 
+this varies however significantly depending on the query, the most specific queries
+leading to higher percentage. We find that to find a car phone holder,
+as little as 3% of the users reach the bottom, while 17% (almost 6 times more)
+reach it when searching for supplements to treat back pain.
 
 ```{r}
-plots[["Times changed/modified search query"]]
+include_png("Did they scroll to the end of the Google Search Page (Y/N)?")
 ```
 
-# Times searcher clicks a result, then bounces back to the search results page and chooses a different result
+# Modifications of the search query
+
+In the big majority of cases (85%), we find that users don't change their search
+query at all. 11% change it once and only 4% change it 2 or more. 
+
+Modifying one's query or not depends a lot on the nature of the search.
+Our data shows that the percentage of users who change their query can go from
+under 5% to more than 30% depending on the nature of the search.
 
 ```{r}
-plots[["Times searcher clicks a result, then bounces back to the search results page and chooses a different result"]]
+include_png("Times changed/modified search query")
+include_png("Times changed/modified search query_2")
 ```
 
+# Bounce
+
+We measure how many times searcher clicks a result, then bounces back to the 
+search results page and chooses a different result. We find that overall the
+bounce rate is small, 83% never bounce while only 5% bounce more than once. 
+
+Depending on the question, this percentage of users who bounce at least once
+varies in the of 10% to 30%.
+
+```{r}
+include_png("Times searcher clicks a result, then bounces back to the search results page and chooses a different result")
+include_png("Times searcher clicks a result, then bounces back to the search results page and chooses a different result_2")
+```
 
 # Number of pages visited
 
-```{r}
-plots[["Number of pages visited"]]
-```
+We find that most users visit only one page, but for some specific queries the
+average can go above 2.
 
+```{r}
+include_png("Number of pages visited")
+include_png("Number of pages visited_2")
+```
 
 # Clicks on organic search results
 
-```{r}
-plots[["Clicks on organic search results"]]
-```
-
-
-# Clicks on Google AdWords/paid listings
+We find that most users click on organic search results at least once.
+However two questions stand out, few users click on organic search results when
+looking for a car accident lawyer or how to cut one's hair.
 
 ```{r}
-plots[["Clicks on Google AdWords/paid listings"]]
+include_png("Clicks on organic search results")
+include_png("Clicks on organic search results_2")
 ```
 
+# Clicks on Google AdWords or paid listings
+
+We find that users click on Google Adwords links or paid listings 19% of the
+time overall but depending on the query this can go from 0% to 30%.
+
+```{r}
+include_png("Clicks on Google AdWords/paid listings")
+include_png("Clicks on Google AdWords/paid listings_2")
+```
 
 # Clicks on video results
 
+We measure how often users click on video links. Our results are very polarizing
+here because for a single question around 95% of users clicked on a video result
+while in all other cases virtually no one did.
+
 ```{r}
-plots[["Clicks on video results"]]
+include_png("Clicks on video results_2")
 ```
 
 
-# Clicks on Google Maps/local listings
+# Clicks on Google Maps or local listings
+
+We find that users click on Google Maps or local listings 40% of the time
+when the query is about finding a car accident lawyer, and very few times
+otherwise.
+
+Additionally, our data indicates that when the user clicked on Google Maps or local 
+listings, their chance of clicking on one of the 3 first listings is 97%.
 
 ```{r}
-plots[["Clicks on Google Maps/local listings"]]
+include_png("Clicks on Google Maps/local listings")
+include_png("Clicks on Google Maps/local listings_2")
 ```
-
-
-# If clicked on Google Maps/local listing, did they click on one of the first three listings?
-
-Yes, 97% of the time
-
-
-# Clicks on Image blocks
-
-```{r}
-plots[["Clicks on Image blocks"]]
-```
-
 
 # Clicks on Google Shopping results
 
-```{r}
-plots[["Clicks on Google Shopping results"]]
-```
+Almost 20% of users click on Google Shopping results when the question is about
+finding a car phone holder, and 5% of them click them when looking for back
+pain supplements. In other cases virtually no one clicks on  Google Shopping results.
 
+```{r}
+include_png("Clicks on Google Shopping results")
+```
 
 # Clicks "people also ask" box
 
+Almost 15% of users click the "people also ask" box when the question is about
+finding supplements forback pain. For other queries this varies from 0% to 3%.
+
 ```{r}
-plots[["Clicks \"people also ask\" box"]]
+include_png("Clicks \"people also ask\" box")
 ```
 
 # Clicks to 2nd+ Google page
 
+We find that very few users (0.5%) click on the second google search page or further.
+Looking at the distinct questions, we see that users looking for supplemenetation
+to treat back pain are the most likely to reach the second page or further (1.5%).
+
 ```{r}
-plots[["Clicks to 2nd+ Google page"]]
+include_png("Clicks to 2nd+ Google page")
 ```
 
 # Seconds to complete search task
 
 ```{r}
-plots[["Seconds to complete search task"]]
+include_png("Seconds to complete search task")
+include_png("Seconds to complete search task_2")
 ```
 
 # Total Clicks
 
 ```{r}
-plots[["Total Clicks"]]
+include_png("Total Clicks")
+include_png("Total Clicks_2")
 ```
 
 
