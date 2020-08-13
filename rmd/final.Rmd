@@ -1,5 +1,5 @@
 ---
-title: "Google User Behaviour Research Study"
+title: "Google User Behaviour Study"
 author: "FrontPage Data and Backlinko"
 date: "`r Sys.Date()`"
 output:
@@ -64,7 +64,7 @@ The current lack of data from Google about the behavior of users has been the gr
 
 This study intends to fill the gap and shed some timely and novel insights on how users interact with Google’s SERP features. 
 
-We addressed the following research questions:
+In this study, we address the following research questions:
 
 1. What percentage of users used the search suggestion?
 2. What is the average time to first click?  
@@ -86,7 +86,7 @@ We addressed the following research questions:
 
 # 0.1 Methodology
 
-* Step 1 **Survey Questions**: Firstly, we aimed at providing a balanced of on the type of research questions. 
+**Step 1 Survey Design**:  We provided the survey respondents with a set of Google search queries. In order to provide a broad set of search queries, we settled for the following ones:   
 
 1.	Commercial_1_pyhsical: find a car phone holder (assumption: Google shopping results)
 2.	Commercial_2_service: find a credit card (assumptions: affiliate articles)
@@ -96,19 +96,11 @@ We addressed the following research questions:
 6.	Transactional: find supplements that may help with lower back pain
 7.	Commercial_3_service: buy groceries online in your local area
 
-Survey questions: https://docs.google.com/document/d/1HNIJ_mWbREtgWrVgm5EvbhTjxL8he_Ix-HnHVBuuKHQ/edit?usp=sharing 
+You can find the survey questions here: [Link](https://docs.google.com/document/d/1HNIJ_mWbREtgWrVgm5EvbhTjxL8he_Ix-HnHVBuuKHQ/edit?usp=sharing)
 
-* Step 2
+**Step 2 Survey Tools and Screen Recording**: Secondly, we decided to screen record survey participants to derive useful data points for our study. Our survey tool of choice was surveygizmo.com, as it nicely integrated with the screen recording software addpipe.com. US-Participants for the study were recruited on Mechnical Turk. The survey instructions can be found [here](https://docs.google.com/document/d/1HNIJ_mWbREtgWrVgm5EvbhTjxL8he_Ix-HnHVBuuKHQ/edit#bookmark=id.w8e7mmaqaluj) and a sample screen recording video can be watched [here](https://us1-addpipe.s3-us-west-1.amazonaws.com/4f295537e6741ceea82cfdd0c5caebf9/xOpH5an8WIW30XkcyS6NsTqK5nBPhaeD.mp4). 
 
-an example video can be watched here
-
-* Step 3
-
-* Step 4
-
-* Step 5
-
-# 0.2 Data Overview
+**Step 3 Data Annotation**: Thirdly, to consider only valid responses for the data annotation task, we reviewed each video individually to check whether instructions were followed properly. We then annotated the video data and entered each data point into a spread sheet. We collected data on 259 videos with a total length of 281 minutes.   
 
 
 # 1. Use of suggested searches
@@ -150,7 +142,7 @@ include_png("Did they scroll to the end of the Google Search Page (Y/N)?")
 
 # 4. Modifications of the search query
 
-In the big majority of cases (85%), we find that users don't change their search
+In the majority of cases (85%), we find that users don't change their search
 query at all. 11% change it once and only 4% change it 2 times or more. 
 
 Modifying one's query or not depends a lot on the nature of the search.
@@ -286,7 +278,7 @@ include_png("Total Clicks_2")
 
 We observe some important correlations between some variables of our study.
 In particular the number of modified queries, the number of bounces, and
-the number of seconds to complete a search show collerations from 0.7 to 0.9.
+the number of seconds to complete a search show correlations from 0.7 to 0.9.
 
 This may indicate that users faced with a challenging Google search try different strategies.
 
