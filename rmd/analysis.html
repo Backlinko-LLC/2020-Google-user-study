@@ -504,7 +504,8 @@ pos_cols &lt;-<span class="st"> </span><span class="kw">colfunc</span>(<span cla
 <h1>0. Data</h1>
 <div id="load" class="section level2">
 <h2>load</h2>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">full_data &lt;-<span class="st"> </span><span class="kw">readRDS</span>(here<span class="op">::</span><span class="kw">here</span>(<span class="st">&quot;proc_data/clean_data.RDS&quot;</span>))</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">full_data &lt;-<span class="st"> </span><span class="kw">readRDS</span>(here<span class="op">::</span><span class="kw">here</span>(<span class="st">&quot;proc_data/clean_data.RDS&quot;</span>))
+participants &lt;-<span class="st"> </span><span class="kw">readRDS</span>(here<span class="op">::</span><span class="kw">here</span>(<span class="st">&quot;proc_data/participants.RDS&quot;</span>))</code></pre></div>
 </div>
 <div id="define-descriptions-for-the-different-questions" class="section level2">
 <h2>define descriptions for the different questions</h2>
@@ -569,6 +570,8 @@ lollipop_chart &lt;-<span class="st"> </span><span class="cf">function</span>(fu
 <span class="st">    </span><span class="kw">theme</span>(<span class="dt">legend.position =</span> <span class="st">&quot;none&quot;</span>)
 }
   
+<span class="co"># item &lt;- &quot;Seconds to first click (use check time stamping on video)&quot;</span>
+
 quantile_chart &lt;-<span class="st"> </span><span class="cf">function</span>(full_data, item, title, xlab, ylab, qlab, meanlab, xmax, 
                            nudge_x, <span class="dt">digits =</span> <span class="dv">1</span>){
   plot_data &lt;-<span class="st"> </span>full_data <span class="op">%&gt;%</span>
@@ -603,6 +606,56 @@ quantile_chart &lt;-<span class="st"> </span><span class="cf">function</span>(fu
 <span class="st">    </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> <span class="cf">function</span>(x) scales<span class="op">::</span><span class="kw">percent</span>(x, digits))
 }
 
+quantile_chart2 &lt;-<span class="st"> </span><span class="cf">function</span>(full_data, item, title, xlab, ylab, qlab, meanlab, xmax, 
+                           nudge_x, <span class="dt">digits =</span> <span class="dv">1</span>){
+  plot_data &lt;-<span class="st"> </span>
+<span class="st">    </span>full_data <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="co"># trim unnecessary cols</span>
+<span class="st">    </span><span class="kw">select</span>(question, <span class="op">!!</span><span class="kw">sym</span>(item)) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="co"># use readable name</span>
+<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">question =</span> question_descs[question]) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="co"># create columns with aggregated values (but not aggregating the rest =&gt; mutate not summarize)</span>
+<span class="st">    </span><span class="kw">group_by</span>(question) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">x_avg =</span> <span class="kw">mean</span>(<span class="op">!!</span><span class="kw">sym</span>(item)),
+           <span class="dt">x_q1 =</span> <span class="kw">quantile</span>(<span class="op">!!</span><span class="kw">sym</span>(item), <span class="fl">0.25</span>),
+           <span class="dt">x_q2 =</span> <span class="kw">quantile</span>(<span class="op">!!</span><span class="kw">sym</span>(item), <span class="fl">0.5</span>),
+           <span class="dt">x_q3 =</span> <span class="kw">quantile</span>(<span class="op">!!</span><span class="kw">sym</span>(item), <span class="fl">0.75</span>),
+           <span class="dt">n_by_question =</span> <span class="kw">n</span>()) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="co"># aggregate to count percentage for each time and each question</span>
+<span class="st">    </span><span class="kw">group_by</span>(<span class="op">!!</span><span class="kw">sym</span>(item), question, x_avg, x_q1, x_q2, x_q3, n_by_question) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">summarize</span>(<span class="dt">pct =</span> <span class="kw">n</span>()<span class="op">/</span>n_by_question[<span class="dv">1</span>]) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="co"># retur to question level to cumulate the pct and project quantiles and mean on curve</span>
+<span class="st">    </span><span class="kw">group_by</span>(question) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">    </span><span class="kw">mutate_at</span>(<span class="st">&quot;pct&quot;</span>, cumsum) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">y_avg =</span> <span class="kw">approx</span>(<span class="op">!!</span><span class="kw">sym</span>(item), pct, <span class="dt">xout =</span> x_avg)<span class="op">$</span>y,
+           <span class="dt">y_q1 =</span> <span class="kw">approx</span>(<span class="op">!!</span><span class="kw">sym</span>(item), pct, <span class="dt">xout =</span> x_q1)<span class="op">$</span>y,
+           <span class="dt">y_q2 =</span> <span class="kw">approx</span>(<span class="op">!!</span><span class="kw">sym</span>(item), pct, <span class="dt">xout =</span> x_q2)<span class="op">$</span>y,
+           <span class="dt">y_q3 =</span> <span class="kw">approx</span>(<span class="op">!!</span><span class="kw">sym</span>(item), pct, <span class="dt">xout =</span> x_q3)<span class="op">$</span>y,
+           <span class="dt">lab_avg =</span> <span class="kw">sprintf</span>(meanlab, <span class="kw">round</span>(x_avg, <span class="dv">1</span>)),
+           <span class="dt">lab_q1 =</span> <span class="kw">sprintf</span>(qlab, <span class="dv">25</span>, x_q1),
+           <span class="dt">lab_q2 =</span> <span class="kw">sprintf</span>(qlab, <span class="dv">50</span>, x_q2),
+           <span class="dt">lab_q3 =</span> <span class="kw">sprintf</span>(qlab, <span class="dv">75</span>, x_q3)) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">ungroup</span>()
+    
+  
+  plot_data <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="op">!!</span><span class="kw">sym</span>(item), pct))  <span class="op">+</span><span class="st"> </span>
+<span class="st">    </span><span class="kw">geom_line</span>() <span class="op">+</span>
+<span class="st">    </span><span class="kw">coord_cartesian</span>(<span class="dt">xlim =</span> <span class="kw">c</span>(<span class="dv">0</span>,xmax)) <span class="op">+</span><span class="st"> </span>
+<span class="st">    </span><span class="kw">ggtitle</span>(title) <span class="op">+</span>
+<span class="st">    </span><span class="kw">labs</span>(<span class="dt">x =</span> xlab, <span class="dt">y =</span> ylab) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(x_q1,y_q1), <span class="dt">size =</span> <span class="dv">4</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(x_q2,y_q2), <span class="dt">size =</span> <span class="dv">4</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(x_q3,y_q3), <span class="dt">size =</span> <span class="dv">4</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(x_avg, y_avg), <span class="dt">color =</span> <span class="st">&quot;blue&quot;</span>, <span class="dt">size =</span> <span class="dv">4</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(x_q1, y_q1, <span class="dt">label =</span> lab_q1), <span class="dt">hjust =</span> <span class="dv">0</span>, <span class="dt">nudge_x =</span> nudge_x) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(x_q2, y_q2, <span class="dt">label =</span> lab_q2), <span class="dt">hjust =</span> <span class="dv">0</span>, <span class="dt">nudge_x =</span> nudge_x) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(x_q3, y_q3, <span class="dt">label =</span> lab_q3), <span class="dt">hjust =</span> <span class="dv">0</span>, <span class="dt">nudge_x =</span> nudge_x) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(x_avg, y_avg, <span class="dt">label =</span> lab_avg), <span class="dt">hjust =</span> <span class="dv">0</span>, <span class="dt">nudge_y =</span> <span class="op">-</span><span class="fl">0.05</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> <span class="cf">function</span>(x) scales<span class="op">::</span><span class="kw">percent</span>(x, digits)) <span class="op">+</span>
+<span class="st">    </span><span class="kw">facet_wrap</span>(<span class="st">&quot;question&quot;</span>, <span class="dt">ncol =</span> <span class="dv">2</span>)
+}
+
 bar_chart &lt;-<span class="st"> </span><span class="cf">function</span>(full_data, item,title, xlab, ylab, threshold) {
   full_data <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">transmute_at</span>(item, <span class="op">~</span><span class="kw">ifelse</span>(.<span class="op">&gt;=</span><span class="st"> </span>threshold, <span class="kw">paste0</span>(threshold, <span class="st">&quot;+&quot;</span>), .)) <span class="op">%&gt;%</span>
@@ -618,19 +671,84 @@ bar_chart &lt;-<span class="st"> </span><span class="cf">function</span>(full_da
 <span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> <span class="cf">function</span>(x) scales<span class="op">::</span><span class="kw">percent</span>(x,<span class="dv">1</span>)) <span class="op">+</span>
 <span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> xlab, <span class="dt">y =</span> ylab)
 }</code></pre></div>
+<div id="participant-stats" class="section level2">
+<h2>1.0 participant stats</h2>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">engine_data &lt;-
+<span class="st">  </span>participants <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">rename_at</span>(<span class="dv">4</span>, <span class="op">~</span><span class="st">&quot;fav_engine&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">count</span>(fav_engine) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">na.omit</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ratio =</span> n<span class="op">/</span><span class="kw">sum</span>(n))
+
+
+<span class="co"># we see that 94% use google, let's show the rest separately</span>
+plots[[<span class="st">&quot;engines&quot;</span>]] &lt;-
+<span class="st">  </span>participants <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">rename_at</span>(<span class="dv">4</span>, <span class="op">~</span><span class="st">&quot;fav_engine&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">fav_engine =</span> <span class="kw">ifelse</span>(fav_engine <span class="op">==</span><span class="st"> &quot;Google&quot;</span>, <span class="st">&quot;Google&quot;</span>, <span class="st">&quot;Competitors&quot;</span>)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">count</span>(fav_engine) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">na.omit</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ratio =</span> n<span class="op">/</span><span class="kw">sum</span>(n)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">arrange</span>(<span class="kw">desc</span>(ratio)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">fav_engine =</span> <span class="kw">factor</span>(fav_engine, fav_engine)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(fav_engine, ratio)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_col</span>(<span class="dt">fill =</span> <span class="st">&quot;lightgreen&quot;</span>,<span class="dt">color =</span> <span class="st">&quot;darkgreen&quot;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(<span class="dt">label =</span> scales<span class="op">::</span><span class="kw">percent</span>(ratio,.<span class="dv">1</span>)), <span class="dt">vjust =</span> <span class="dv">0</span>, <span class="dt">nudge_y =</span> .<span class="dv">02</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;94% of users most commonly use Google&quot;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> <span class="cf">function</span>(x) scales<span class="op">::</span><span class="kw">percent</span>(x,<span class="dv">1</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;% of users&quot;</span>)
+
+plots[[<span class="st">&quot;engines2&quot;</span>]] &lt;-
+<span class="st">  </span>participants <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">rename_at</span>(<span class="dv">4</span>, <span class="op">~</span><span class="st">&quot;fav_engine&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">count</span>(fav_engine) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">na.omit</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ratio =</span> n<span class="op">/</span><span class="kw">sum</span>(n)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">filter</span>(fav_engine <span class="op">!=</span><span class="st"> &quot;Google&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">arrange</span>(<span class="kw">desc</span>(ratio)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">fav_engine =</span> <span class="kw">factor</span>(fav_engine, fav_engine)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(fav_engine, ratio)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_col</span>(<span class="dt">fill =</span> <span class="st">&quot;lightgreen&quot;</span>,<span class="dt">color =</span> <span class="st">&quot;darkgreen&quot;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(<span class="dt">label =</span> scales<span class="op">::</span><span class="kw">percent</span>(ratio,.<span class="dv">1</span>)), <span class="dt">vjust =</span> <span class="dv">0</span>, <span class="dt">nudge_y =</span> .<span class="dv">001</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;Most commonly used browser among Google competitors&quot;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> <span class="cf">function</span>(x) scales<span class="op">::</span><span class="kw">percent</span>(x,<span class="dv">1</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;% of users&quot;</span>)
+
+<span class="kw">save_plot</span>(plots[[<span class="st">&quot;engines&quot;</span>]], <span class="st">&quot;engines&quot;</span>)
+<span class="kw">save_plot</span>(plots[[<span class="st">&quot;engines2&quot;</span>]], <span class="st">&quot;engines2&quot;</span>)
+
+
+
+plots[[<span class="st">&quot;how_do_you_use_gs&quot;</span>]] &lt;-
+<span class="st">  </span>participants <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">rename_at</span>(<span class="dv">5</span>, <span class="op">~</span><span class="st">&quot;how_do_you_use_gs&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">count</span>(how_do_you_use_gs) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">na.omit</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">ratio =</span> n<span class="op">/</span><span class="kw">sum</span>(n)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">arrange</span>(<span class="kw">desc</span>(ratio)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">how_do_you_use_gs =</span> <span class="kw">factor</span>(how_do_you_use_gs, how_do_you_use_gs)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(how_do_you_use_gs, ratio)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_col</span>(<span class="dt">fill =</span> <span class="st">&quot;lightgreen&quot;</span>,<span class="dt">color =</span> <span class="st">&quot;darkgreen&quot;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_text</span>(<span class="kw">aes</span>(<span class="dt">label =</span> scales<span class="op">::</span><span class="kw">percent</span>(ratio,.<span class="dv">1</span>)), <span class="dt">vjust =</span> <span class="dv">0</span>, <span class="dt">nudge_y =</span> .<span class="dv">01</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">ggtitle</span>(<span class="st">&quot;Frequency of use of Google search&quot;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> <span class="cf">function</span>(x) scales<span class="op">::</span><span class="kw">percent</span>(x,<span class="dv">1</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">x =</span> <span class="st">&quot;&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;% of users&quot;</span>)
+
+<span class="kw">save_plot</span>(plots[[<span class="st">&quot;how_do_you_use_gs&quot;</span>]], <span class="st">&quot;how_do_you_use_gs&quot;</span>)</code></pre></div>
+</div>
 <div id="when-typing-the-search-query-did-they-select-one-of-the-suggested-searches-yn" class="section level2">
 <h2>1.1 When typing the search query, did they select one of the suggested searches? (Y/N)</h2>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">item &lt;-<span class="st"> &quot;When typing the search query, did they select one of the suggested searches? (Y/N)&quot;</span>
 
 plots[[item]] &lt;-<span class="st"> </span><span class="kw">lollipop_chart</span>(
   full_data, item,
-  <span class="st">&quot;Suggested searches are used 1 time in 4&quot;</span>, <span class="st">&quot;% of users who selected a suggestion&quot;</span>,
+  <span class="st">&quot;Suggested searches are used 23% of the time&quot;</span>, <span class="st">&quot;% of users who selected a suggestion&quot;</span>,
   <span class="dt">nudge_x =</span> .<span class="dv">02</span>, <span class="dt">fun =</span> <span class="op">~</span><span class="kw">mean</span>(. <span class="op">!=</span><span class="st"> </span><span class="dv">0</span>, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>))
 
 <span class="kw">save_plot</span>(plots[[item]], item)</code></pre></div>
 </div>
-<div id="seconds-to-first-click-use-check-time-stamping-on-video" class="section level2">
-<h2>1.2 Seconds to first click (use check time stamping on video)</h2>
+<div id="seconds-to-first-click" class="section level2">
+<h2>1.2 Seconds to first click</h2>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">item &lt;-<span class="st"> &quot;Seconds to first click (use check time stamping on video)&quot;</span>
 
 <span class="co"># full_data %&gt;%</span>
@@ -649,6 +767,16 @@ plots[[item]] &lt;-<span class="st"> </span><span class="kw">quantile_chart</spa
   <span class="dt">xmax =</span> <span class="dv">50</span>, <span class="dt">nudge_x =</span> <span class="dv">3</span>)
 
 <span class="kw">save_plot</span>(plots[[item]], item)
+
+item_facets &lt;-<span class="st"> </span><span class="kw">paste0</span>(item,<span class="st">&quot;_facets&quot;</span>)
+plots[[item_facets]] &lt;-<span class="st"> </span><span class="kw">quantile_chart2</span>(
+  full_data, item,
+  <span class="st">&quot;Time before first click by question&quot;</span>,
+  <span class="st">&quot;time (seconds)&quot;</span>, <span class="st">&quot;% of users who click before time&quot;</span>,
+  <span class="dt">meanlab =</span> <span class="st">&quot;Average: %s sec&quot;</span>, <span class="dt">qlab =</span> <span class="st">&quot;%s%% click before %s sec&quot;</span>,
+  <span class="dt">xmax =</span> <span class="dv">50</span>, <span class="dt">nudge_x =</span> <span class="dv">3</span>)
+
+<span class="kw">save_plot</span>(plots[[item_facets]], item_facets)
 
 item2 &lt;-<span class="st"> </span><span class="kw">paste0</span>(item,<span class="st">&quot;_2&quot;</span>)
 
@@ -928,7 +1056,7 @@ plots[[item2]] &lt;-<span class="st"> </span><span class="kw">lollipop_chart</sp
   full_data, item, 
   <span class="st">&quot;Very few user click on a further google page&quot;</span>, <span class="st">&quot;% of users who click on a further google page&quot;</span>,
   <span class="dt">fun =</span> <span class="op">~</span><span class="st"> </span><span class="kw">mean</span>(.<span class="op">!=</span><span class="dv">0</span>, <span class="dt">na.rm =</span><span class="ot">TRUE</span>),
-  <span class="dt">nudge_x =</span> .<span class="dv">001</span>, <span class="dt">digits =</span> <span class="dv">2</span>)
+  <span class="dt">nudge_x =</span> .<span class="dv">001</span>, <span class="dt">digits =</span> .<span class="dv">1</span>)
 
 <span class="kw">save_plot</span>(plots[[item]], item)</code></pre></div>
 </div>
@@ -956,10 +1084,20 @@ plots[[item]] &lt;-<span class="st"> </span><span class="kw">quantile_chart</spa
 
 <span class="kw">save_plot</span>(plots[[item]], item)
 
+item_facets &lt;-<span class="st"> </span><span class="kw">paste0</span>(item,<span class="st">&quot;_facets&quot;</span>)
+plots[[item_facets]] &lt;-<span class="st"> </span><span class="kw">quantile_chart2</span>(
+  full_data, item,
+  <span class="st">&quot;Time to complete a search by question&quot;</span>,
+  <span class="st">&quot;time (seconds)&quot;</span>, <span class="st">&quot;% of users who complete the task before time&quot;</span>,
+  <span class="dt">meanlab =</span> <span class="st">&quot;Average: %s sec&quot;</span>, <span class="dt">qlab =</span> <span class="st">&quot;%s%% complete before %s sec&quot;</span>,
+  <span class="dt">xmax =</span> <span class="dv">250</span>, <span class="dt">nudge_x =</span> <span class="dv">8</span>)
+
+<span class="kw">save_plot</span>(plots[[item_facets]], item_facets)
+
 item2 &lt;-<span class="st"> </span><span class="kw">paste0</span>(item, <span class="st">&quot;_2&quot;</span>)
 plots[[item2]] &lt;-<span class="st"> </span><span class="kw">lollipop_chart</span>(
   full_data, item, 
-  <span class="st">&quot;Depending on the query the search takes an average tome of 45 sec to 1 min 30&quot;</span>, <span class="st">&quot;time (seconds)&quot;</span>,
+  <span class="st">&quot;Depending on the query the search takes an average time of 45 sec to 1 min 30&quot;</span>, <span class="st">&quot;time (seconds)&quot;</span>,
   <span class="dt">fun =</span> <span class="op">~</span><span class="st"> </span><span class="kw">mean</span>(., <span class="dt">na.rm =</span><span class="ot">TRUE</span>),
   <span class="dt">percent =</span> <span class="ot">FALSE</span>,
   <span class="dt">nudge_x =</span> <span class="dv">8</span>)
@@ -987,7 +1125,15 @@ plots[[item2]] &lt;-<span class="st"> </span><span class="kw">lollipop_chart</sp
 
 <span class="kw">save_plot</span>(plots[[item]], item)
 
-<span class="kw">save_plot</span>(plots[[item]], item)
+item_facets &lt;-<span class="st"> </span><span class="kw">paste0</span>(item,<span class="st">&quot;_facets&quot;</span>)
+plots[[item_facets]] &lt;-<span class="st"> </span><span class="kw">quantile_chart2</span>(
+  full_data, item,
+  <span class="st">&quot;Total number of clicks by question&quot;</span>,
+  <span class="st">&quot;time (seconds)&quot;</span>, <span class="st">&quot;% of users who clicked less than this amount&quot;</span>,
+  <span class="dt">meanlab =</span> <span class="st">&quot;Average: %s sec&quot;</span>, <span class="dt">qlab =</span> <span class="st">&quot;%s%% click %s times or less&quot;</span>,
+  <span class="dt">xmax =</span> <span class="dv">30</span>, <span class="dt">nudge_x =</span> <span class="dv">1</span>)
+
+<span class="kw">save_plot</span>(plots[[item_facets]], item_facets)
 
 item2 &lt;-<span class="st"> </span><span class="kw">paste0</span>(item, <span class="st">&quot;_2&quot;</span>)
 plots[[item2]] &lt;-<span class="st"> </span><span class="kw">lollipop_chart</span>(
@@ -1012,6 +1158,8 @@ plots[[item2]] &lt;-<span class="st"> </span><span class="kw">lollipop_chart</sp
 plots[[<span class="st">&quot;correlations&quot;</span>]] &lt;-<span class="st"> </span>GGally<span class="op">::</span><span class="kw">ggcorr</span>(
   data2, <span class="dt">nbreaks =</span> <span class="dv">8</span>, <span class="dt">palette =</span><span class="st">'RdGy'</span>, <span class="dt">label =</span> <span class="ot">TRUE</span>, <span class="dt">label_size =</span> <span class="dv">5</span>, <span class="dt">label_color =</span> <span class="st">'white'</span>)
 <span class="kw">save_plot</span>(plots[[<span class="st">&quot;correlations&quot;</span>]], <span class="st">&quot;correlations&quot;</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">sum</span>(full_data[[<span class="st">&quot;Seconds to complete search task&quot;</span>]]) <span class="op">/</span><span class="dv">60</span><span class="op">/</span><span class="dv">60</span></code></pre></div>
+<pre><code>## [1] 37.93222</code></pre>
 </div>
 </div>
 <div id="save-results" class="section level1">

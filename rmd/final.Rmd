@@ -57,6 +57,8 @@ include_png <- function(item) {
   } 
 ```
 
+The total recording time was 2276 minutes (38 hours)
+
 
 # 0. Introduction
 
@@ -102,6 +104,21 @@ You can find the survey questions here: [Link](https://docs.google.com/document/
 
 **Step 3 Data Annotation**: Thirdly, to consider only valid responses for the data annotation task, we reviewed each video individually to check whether instructions were followed properly. We then annotated the video data and entered each data point into a spread sheet. We collected data on 259 videos with a total length of 281 minutes.   
 
+# 0.2 Overview of the respondents
+
+Respondents provided information about their use of search engines.
+
+We observe that Google is most commonly used by 94% of users.
+Bing is the biggest competitor with a much smaller share of 2.7%.
+
+76% of users use Google search multiple times a day, and 94% use it at least once
+every day.
+
+```{r}
+include_png("engines")
+include_png("engines2")
+include_png("how_do_you_use_gs")
+```
 
 # 1. Use of suggested searches
 
@@ -110,8 +127,7 @@ We find that users use them between 18% and 31% of the time, globally 23% of the
 on average.
 
 ```{r}
-item <- "When typing the search query, did they select one of the suggested searches? (Y/N)"
-include_png(item)
+include_png("When typing the search query, did they select one of the suggested searches? (Y/N)")
 ```
 
 # 2. Time to first click
@@ -125,6 +141,7 @@ varies from 10 to 25 seconds.
 
 ```{r}
 include_png("Seconds to first click (use check time stamping on video)")
+include_png("Seconds to first click (use check time stamping on video)_facets")
 include_png("Seconds to first click (use check time stamping on video)_2")
 ```
 
@@ -154,7 +171,7 @@ include_png("Times changed/modified search query")
 include_png("Times changed/modified search query_2")
 ```
 
-# 5. Bounce
+# 5. Pogo sticking
 
 We measure how many times searchers clicks a result, then bounces back to the 
 search results page and chooses a different result. We find that overall the
@@ -260,6 +277,7 @@ half of the searches are completed in 30 seconds to 90 seconds.
 
 ```{r}
 include_png("Seconds to complete search task")
+include_png("Seconds to complete search task_facets")
 include_png("Seconds to complete search task_2")
 ```
 
@@ -271,6 +289,7 @@ half of the searches are completed in 30 seconds to 90 seconds.
 
 ```{r}
 include_png("Total Clicks")
+include_png("Total Clicks_facets")
 include_png("Total Clicks_2")
 ```
 

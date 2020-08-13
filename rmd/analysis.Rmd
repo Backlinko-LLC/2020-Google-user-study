@@ -217,6 +217,7 @@ pos_cols <- colfunc(10)
 
 ```{r}
 full_data <- readRDS(here::here("proc_data/clean_data.RDS"))
+participants <- readRDS(here::here("proc_data/participants.RDS"))
 ```
 
 
@@ -288,6 +289,8 @@ lollipop_chart <- function(full_data, item, title, xlab, nudge_x = 0, percent = 
     theme(legend.position = "none")
 }
   
+# item <- "Seconds to first click (use check time stamping on video)"
+
 quantile_chart <- function(full_data, item, title, xlab, ylab, qlab, meanlab, xmax, 
                            nudge_x, digits = 1){
   plot_data <- full_data %>%
@@ -322,6 +325,56 @@ quantile_chart <- function(full_data, item, title, xlab, ylab, qlab, meanlab, xm
     scale_y_continuous(labels = function(x) scales::percent(x, digits))
 }
 
+quantile_chart2 <- function(full_data, item, title, xlab, ylab, qlab, meanlab, xmax, 
+                           nudge_x, digits = 1){
+  plot_data <- 
+    full_data %>%
+    # trim unnecessary cols
+    select(question, !!sym(item)) %>%
+    # use readable name
+    mutate(question = question_descs[question]) %>%
+    # create columns with aggregated values (but not aggregating the rest => mutate not summarize)
+    group_by(question) %>% 
+    mutate(x_avg = mean(!!sym(item)),
+           x_q1 = quantile(!!sym(item), 0.25),
+           x_q2 = quantile(!!sym(item), 0.5),
+           x_q3 = quantile(!!sym(item), 0.75),
+           n_by_question = n()) %>%
+    # aggregate to count percentage for each time and each question
+    group_by(!!sym(item), question, x_avg, x_q1, x_q2, x_q3, n_by_question) %>%
+    summarize(pct = n()/n_by_question[1]) %>%
+    # retur to question level to cumulate the pct and project quantiles and mean on curve
+    group_by(question) %>% 
+    mutate_at("pct", cumsum) %>%
+    mutate(y_avg = approx(!!sym(item), pct, xout = x_avg)$y,
+           y_q1 = approx(!!sym(item), pct, xout = x_q1)$y,
+           y_q2 = approx(!!sym(item), pct, xout = x_q2)$y,
+           y_q3 = approx(!!sym(item), pct, xout = x_q3)$y,
+           lab_avg = sprintf(meanlab, round(x_avg, 1)),
+           lab_q1 = sprintf(qlab, 25, x_q1),
+           lab_q2 = sprintf(qlab, 50, x_q2),
+           lab_q3 = sprintf(qlab, 75, x_q3)) %>%
+    ungroup()
+    
+  
+  plot_data %>%
+    ggplot(aes(!!sym(item), pct))  + 
+    geom_line() +
+    coord_cartesian(xlim = c(0,xmax)) + 
+    ggtitle(title) +
+    labs(x = xlab, y = ylab) +
+    geom_point(aes(x_q1,y_q1), size = 4) +
+    geom_point(aes(x_q2,y_q2), size = 4) +
+    geom_point(aes(x_q3,y_q3), size = 4) +
+    geom_point(aes(x_avg, y_avg), color = "blue", size = 4) +
+    geom_text(aes(x_q1, y_q1, label = lab_q1), hjust = 0, nudge_x = nudge_x) +
+    geom_text(aes(x_q2, y_q2, label = lab_q2), hjust = 0, nudge_x = nudge_x) +
+    geom_text(aes(x_q3, y_q3, label = lab_q3), hjust = 0, nudge_x = nudge_x) +
+    geom_text(aes(x_avg, y_avg, label = lab_avg), hjust = 0, nudge_y = -0.05) +
+    scale_y_continuous(labels = function(x) scales::percent(x, digits)) +
+    facet_wrap("question", ncol = 2)
+}
+
 bar_chart <- function(full_data, item,title, xlab, ylab, threshold) {
   full_data %>%
   transmute_at(item, ~ifelse(.>= threshold, paste0(threshold, "+"), .)) %>%
@@ -339,6 +392,75 @@ bar_chart <- function(full_data, item,title, xlab, ylab, threshold) {
 }
 ```
 
+## 1.0 participant stats
+
+```{r}
+engine_data <-
+  participants %>%
+  rename_at(4, ~"fav_engine") %>%
+  count(fav_engine) %>%
+  na.omit() %>%
+  mutate(ratio = n/sum(n))
+
+
+# we see that 94% use google, let's show the rest separately
+plots[["engines"]] <-
+  participants %>%
+  rename_at(4, ~"fav_engine") %>%
+  mutate(fav_engine = ifelse(fav_engine == "Google", "Google", "Competitors")) %>%
+  count(fav_engine) %>%
+  na.omit() %>%
+  mutate(ratio = n/sum(n)) %>%
+  arrange(desc(ratio)) %>%
+  mutate(fav_engine = factor(fav_engine, fav_engine)) %>%
+  ggplot(aes(fav_engine, ratio)) +
+  geom_col(fill = "lightgreen",color = "darkgreen") +
+  geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .02) +
+  ggtitle("94% of users most commonly use Google") +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "", y = "% of users")
+
+plots[["engines2"]] <-
+  participants %>%
+  rename_at(4, ~"fav_engine") %>%
+  count(fav_engine) %>%
+  na.omit() %>%
+  mutate(ratio = n/sum(n)) %>%
+  filter(fav_engine != "Google") %>%
+  arrange(desc(ratio)) %>%
+  mutate(fav_engine = factor(fav_engine, fav_engine)) %>%
+  ggplot(aes(fav_engine, ratio)) +
+  geom_col(fill = "lightgreen",color = "darkgreen") +
+  geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .001) +
+  ggtitle("Most commonly used browser among Google competitors") +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "", y = "% of users")
+
+save_plot(plots[["engines"]], "engines")
+save_plot(plots[["engines2"]], "engines2")
+
+
+
+plots[["how_do_you_use_gs"]] <-
+  participants %>%
+  rename_at(5, ~"how_do_you_use_gs") %>%
+  count(how_do_you_use_gs) %>%
+  na.omit() %>%
+  mutate(ratio = n/sum(n)) %>%
+  arrange(desc(ratio)) %>%
+  mutate(how_do_you_use_gs = factor(how_do_you_use_gs, how_do_you_use_gs)) %>%
+  ggplot(aes(how_do_you_use_gs, ratio)) +
+  geom_col(fill = "lightgreen",color = "darkgreen") +
+  geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .01) +
+  ggtitle("Frequency of use of Google search") +
+  scale_y_continuous(labels = function(x) scales::percent(x,1)) +
+  labs(x = "", y = "% of users")
+
+save_plot(plots[["how_do_you_use_gs"]], "how_do_you_use_gs")
+```
+
+
+
 ## 1.1 When typing the search query, did they select one of the suggested searches? (Y/N)
 
 ```{r}
@@ -346,13 +468,13 @@ item <- "When typing the search query, did they select one of the suggested sear
 
 plots[[item]] <- lollipop_chart(
   full_data, item,
-  "Suggested searches are used 1 time in 4", "% of users who selected a suggestion",
+  "Suggested searches are used 23% of the time", "% of users who selected a suggestion",
   nudge_x = .02, fun = ~mean(. != 0, na.rm = TRUE))
 
 save_plot(plots[[item]], item)
 ```
 
-## 1.2 Seconds to first click (use check time stamping on video)
+## 1.2 Seconds to first click
 
 ```{r}
 item <- "Seconds to first click (use check time stamping on video)"
@@ -373,6 +495,16 @@ plots[[item]] <- quantile_chart(
   xmax = 50, nudge_x = 3)
 
 save_plot(plots[[item]], item)
+
+item_facets <- paste0(item,"_facets")
+plots[[item_facets]] <- quantile_chart2(
+  full_data, item,
+  "Time before first click by question",
+  "time (seconds)", "% of users who click before time",
+  meanlab = "Average: %s sec", qlab = "%s%% click before %s sec",
+  xmax = 50, nudge_x = 3)
+
+save_plot(plots[[item_facets]], item_facets)
 
 item2 <- paste0(item,"_2")
 
@@ -637,7 +769,7 @@ plots[[item]] <- lollipop_chart(
   full_data, item, 
   "Very few user click on a further google page", "% of users who click on a further google page",
   fun = ~ mean(.!=0, na.rm =TRUE),
-  nudge_x = .001, digits = 2)
+  nudge_x = .001, digits = .1)
 
 save_plot(plots[[item]], item)
 ```
@@ -668,10 +800,20 @@ plots[[item]] <- quantile_chart(
 
 save_plot(plots[[item]], item)
 
+item_facets <- paste0(item,"_facets")
+plots[[item_facets]] <- quantile_chart2(
+  full_data, item,
+  "Time to complete a search by question",
+  "time (seconds)", "% of users who complete the task before time",
+  meanlab = "Average: %s sec", qlab = "%s%% complete before %s sec",
+  xmax = 250, nudge_x = 8)
+
+save_plot(plots[[item_facets]], item_facets)
+
 item2 <- paste0(item, "_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item, 
-  "Depending on the query the search takes an average tome of 45 sec to 1 min 30", "time (seconds)",
+  "Depending on the query the search takes an average time of 45 sec to 1 min 30", "time (seconds)",
   fun = ~ mean(., na.rm =TRUE),
   percent = FALSE,
   nudge_x = 8)
@@ -696,7 +838,15 @@ plots[[item]] <- quantile_chart(
 
 save_plot(plots[[item]], item)
 
-save_plot(plots[[item]], item)
+item_facets <- paste0(item,"_facets")
+plots[[item_facets]] <- quantile_chart2(
+  full_data, item,
+  "Total number of clicks by question",
+  "time (seconds)", "% of users who clicked less than this amount",
+  meanlab = "Average: %s sec", qlab = "%s%% click %s times or less",
+  xmax = 30, nudge_x = 1)
+
+save_plot(plots[[item_facets]], item_facets)
 
 item2 <- paste0(item, "_2")
 plots[[item2]] <- lollipop_chart(
@@ -724,6 +874,14 @@ plots[["correlations"]] <- GGally::ggcorr(
   data2, nbreaks = 8, palette ='RdGy', label = TRUE, label_size = 5, label_color = 'white')
 save_plot(plots[["correlations"]], "correlations")
 ```
+
+
+```{r}
+sum(full_data[["Seconds to complete search task"]]) /60/60
+```
+
+
+
 
 # 2. Save Results
 

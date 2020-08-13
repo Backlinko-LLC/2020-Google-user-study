@@ -10,10 +10,13 @@ sheet_names <-  googlesheets4::gs4_get(url)$sheets$name
 # use  sapply to with simplify = FALSE to get named elements
 sheets <- sapply(sheet_names, googlesheets4::read_sheet, ss = url, 
                  simplify = FALSE, na = c("", "-"))
+
+participants <-  sheets[["final"]]
+
 sheets <- sheets[startsWith(names(sheets), "Q")]
 
 saveRDS(sheets, here::here("proc_data/fetched_data.RDS"))
-
+saveRDS(participants, here::here("proc_data/participants.RDS"))
 
 
 ## tidy the data into one clean table
