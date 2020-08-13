@@ -256,7 +256,7 @@ save_plot <- function(plot, item) {
     ggsave(here::here("plots", paste0(make.names(item), ".png")), plot, width = 12, height = 11)
 }
 
-lollipop_chart <- function(full_data, item, title, xlab, nudge_x = 0, percent = TRUE, fun = ~mean(., na.rm = TRUE)) {
+lollipop_chart <- function(full_data, item, title, xlab, nudge_x = 0, percent = TRUE, fun = ~mean(., na.rm = TRUE), digits = 1) {
   summary_by_q <-
     full_data %>%
     mutate(question = question_descs[question]) %>%
@@ -279,16 +279,17 @@ lollipop_chart <- function(full_data, item, title, xlab, nudge_x = 0, percent = 
                      color = group), size = 2) + 
     geom_point(aes(x = !!sym(item), y = question, color = group), size = 7) +
     geom_text(data = summary_overall,
-              aes(!!sym(item), question, label = if(percent) scales::percent(!!sym(item), 1) else round(!!sym(item), 2)), color = "black", 
+              aes(!!sym(item), question, label = if(percent) scales::percent(!!sym(item), digits) else round(!!sym(item), digits)), color = "black", 
               hjust = 0, nudge_x = nudge_x) +
     labs(x = xlab, y = "") +
     scale_color_manual(values = c("lightgreen","lightblue")) +
-    {if (percent) scale_x_continuous(labels = scales::percent)} +
+    {if (percent) scale_x_continuous(labels = function(x) scales::percent(x, digits))} +
     ggtitle(title) +
     theme(legend.position = "none")
 }
   
-quantile_chart <- function(full_data, item, title, xlab, ylab, qlab, meanlab, xmax, nudge_x){
+quantile_chart <- function(full_data, item, title, xlab, ylab, qlab, meanlab, xmax, 
+                           nudge_x, digits = 1){
   plot_data <- full_data %>%
     group_by_at(item) %>%
     summarize(pct = n()/nrow(.)) %>%
@@ -299,7 +300,7 @@ quantile_chart <- function(full_data, item, title, xlab, ylab, qlab, meanlab, xm
   mean_data <- tibble(
     x = mean(full_data[[item]]),
     y = approx(plot_data[[item]], plot_data$pct, xout = x_mean)$y,
-    lab = sprintf(meanlab, round(x_mean))
+    lab = sprintf(meanlab, round(x_mean, 1))
   )
   
   q_data = tibble(
@@ -314,11 +315,11 @@ quantile_chart <- function(full_data, item, title, xlab, ylab, qlab, meanlab, xm
     coord_cartesian(xlim = c(0,xmax)) + 
     ggtitle(title) +
     labs(x = xlab, y = ylab) +
-    geom_point(aes(x,y), data =q_data, size = 4) +
+    geom_point(aes(x,y), data = q_data, size = 4) +
     geom_point(aes(x,y), data = mean_data, color = "blue", size = 4) +
     geom_text(aes(x,y, label = lab), data = q_data, hjust = 0, nudge_x = nudge_x) +
     geom_text(aes(x,y, label = lab), data = mean_data, hjust = 0, nudge_y = -0.05) +
-    scale_y_continuous(labels = function(x) scales::percent(x,1))
+    scale_y_continuous(labels = function(x) scales::percent(x, digits))
 }
 
 bar_chart <- function(full_data, item,title, xlab, ylab, threshold) {
@@ -483,7 +484,7 @@ item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
   "Percentage of users who click on organic search results", "", 
-  nudge_x = .1,
+  nudge_x = .05,
   percent = TRUE,
   fun = ~mean(. != 0, na.rm = TRUE))
 
@@ -530,7 +531,7 @@ save_plot(plots[[item]], item)
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
-  "Users are much more likely to click on video results\nif they look for how tocut one's hair",
+  "Users are much more likely to click on video results\nif they look for how to cut one's hair",
   "% of users who click on video results", 
   nudge_x = .02,
   percent = TRUE,
@@ -547,7 +548,7 @@ table(full_data[[item]])
 
 plots[[item]] <- bar_chart(
   full_data, item,
-  item, "number of clicks", "% of users", 2)
+  "In 94% of searches, the user won't click on Maps or local listings", "number of clicks", "% of users who click on Maps or local listings", 2)
 
 save_plot(plots[[item]], item)
 
@@ -605,7 +606,7 @@ table(full_data[[item]], useNA = "always")
 plots[[item]] <- lollipop_chart(
   full_data, item, 
   "Users are more likely to click on Google Shopping results\nif they look for supplements to treat back pain", "% of users who click on Google Shopping results",
-  fun = ~ mean(.!=0, na.rm =TRUE))
+  fun = ~ mean(.!=0, na.rm =TRUE), nudge_x = .01)
 
 save_plot(plots[[item]], item)
 ```
@@ -636,7 +637,7 @@ plots[[item]] <- lollipop_chart(
   full_data, item, 
   "Very few user click on a further google page", "% of users who click on a further google page",
   fun = ~ mean(.!=0, na.rm =TRUE),
-  nudge_x = .001)
+  nudge_x = .001, digits = 2)
 
 save_plot(plots[[item]], item)
 ```
@@ -659,7 +660,7 @@ item <- "Seconds to complete search task"
 
 plots[[item]] <- quantile_chart(
   full_data, item,
-  "Time to complete a search task",
+  "On average a user takes 1 min 16 seconds to complete a search",
   "time (seconds)", "% of users who complete the task before time",
   meanlab = "Average : %s sec", qlab = "%s%% complete before %s sec",
   xmax = 250, nudge_x = 8
@@ -670,7 +671,7 @@ save_plot(plots[[item]], item)
 item2 <- paste0(item, "_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item, 
-  "Average time to complete search task", "time (seconds)",
+  "Depending on the query the search takes an average tome of 45 sec to 1 min 30", "time (seconds)",
   fun = ~ mean(., na.rm =TRUE),
   percent = FALSE,
   nudge_x = 8)
@@ -688,8 +689,8 @@ table(full_data[[item]], useNA = "always")
 plots[[item]] <- quantile_chart(
   full_data, item,
   "Total number of clicks",
-  "time (seconds)", "% of users who clicked at least this amount",
-  meanlab = "Average : %s times", qlab = "%s%% click at least %s times",
+  "time (seconds)", "% of users who clicked less than this amount",
+  meanlab = "Average : %s times", qlab = "%s%% click %s times or less",
   xmax = 30, nudge_x = 1
 )
 
@@ -708,6 +709,22 @@ plots[[item2]] <- lollipop_chart(
 save_plot(plots[[item2]], item2)
 ```
 
+## correlations
+
+```{r}
+data2 <-
+  full_data %>%
+  na.omit() %>%
+  select(-c(1, 2, 3, 5, 9, 10, 11, 12, 13, 14, 15, 16, 17)) %>%
+  select(-1) %>%
+  select_if(is.numeric) %>%
+  setNames(c("modified queries", "bounces", "pages visited", "seconds to complete", "total clicks"))
+
+plots[["correlations"]] <- GGally::ggcorr(
+  data2, nbreaks = 8, palette ='RdGy', label = TRUE, label_size = 5, label_color = 'white')
+save_plot(plots[["correlations"]], "correlations")
+```
+
 # 2. Save Results
 
 For conveniencewe save our list of ggplot objects, though we'll directly
@@ -716,4 +733,6 @@ use the pictures in final.Rmd.
 ```{r}
 saveRDS(plots, here::here("proc_data/plots.RDS"))
 ```
+
+
 

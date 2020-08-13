@@ -64,7 +64,7 @@ include_png <- function(item) {
 # Use of suggested searches
 
 We measure for each question what percentage of users used the search suggestion.
-We find that users use them between 18% and 23% of the time, globally 23% of the time
+We find that users use them between 18% and 31% of the time, globally 23% of the time
 on average.
 
 ```{r}
@@ -101,11 +101,11 @@ include_png("Did they scroll to the end of the Google Search Page (Y/N)?")
 # Modifications of the search query
 
 In the big majority of cases (85%), we find that users don't change their search
-query at all. 11% change it once and only 4% change it 2 or more. 
+query at all. 11% change it once and only 4% change it 2 times or more. 
 
 Modifying one's query or not depends a lot on the nature of the search.
 Our data shows that the percentage of users who change their query can go from
-under 5% to more than 30% depending on the nature of the search.
+under 5% to more than 35% when trying to find supplements for back pain.
 
 ```{r}
 include_png("Times changed/modified search query")
@@ -114,7 +114,7 @@ include_png("Times changed/modified search query_2")
 
 # Bounce
 
-We measure how many times searcher clicks a result, then bounces back to the 
+We measure how many times searchers clicks a result, then bounces back to the 
 search results page and chooses a different result. We find that overall the
 bounce rate is small, 83% never bounce while only 5% bounce more than once. 
 
@@ -159,7 +159,7 @@ include_png("Clicks on Google AdWords/paid listings_2")
 
 # Clicks on video results
 
-We measure how often users click on video links. Our results are very polarizing
+We measure how often users click on video links. Our results are very polarized
 here because for a single question around 95% of users clicked on a video result
 while in all other cases virtually no one did.
 
@@ -211,7 +211,10 @@ to treat back pain are the most likely to reach the second page or further (1.5%
 include_png("Clicks to 2nd+ Google page")
 ```
 
-# Seconds to complete search task
+# Time taken to complete the search
+
+The average search is computed in 76 seconds, and we find that
+half of the searches are completed in 30 seconds to 90 seconds.
 
 ```{r}
 include_png("Seconds to complete search task")
@@ -220,10 +223,25 @@ include_png("Seconds to complete search task_2")
 
 # Total Clicks
 
+During an average search a user clicks 7 times on average, 
+in our dataset is computed in 76 seconds, and we find that
+half of the searches are completed in 30 seconds to 90 seconds.
+
 ```{r}
 include_png("Total Clicks")
 include_png("Total Clicks_2")
 ```
 
+# Correlations
+
+We observe some important correlations between some variables of our study.
+In particular the number of modified queries, the number of bounces, and
+the number of seconds to complete a search show collerations from 0.7 to 0.9.
+
+This indicates that users faced with a challenging search try different strategies.
+
+```{r}
+include_png("correlations")
+```
 
 
