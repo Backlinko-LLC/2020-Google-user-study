@@ -1,6 +1,6 @@
 ---
-title: "Google User Study"
-author: ""
+title: "Google User Behaviour Research Study"
+author: "FrontPage Data and Backlinko"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -60,8 +60,58 @@ include_png <- function(item) {
 
 # 0. Introduction
 
+The current lack of data from Google about the behavior of users has been the greatest frustration for SEOs. Although some previous studies have tried to analyze user behavior on Google, most of them are outdated as SERP features have changed over the past years.
 
-# Use of suggested searches
+This study intends to fill the gap and shed some timely and novel insights on how users interact with Google’s SERP features. 
+
+We addressed the following research questions:
+
+1. What percentage of users used the search suggestion?
+2. What is the average time to first click?  
+3. What percentage of users scroll to the bottom of the first page?
+4. What percentage of users change their search query? 
+5. What percentage of users bounces back to the search results and chooses a different result? (i.e.pogo-sticking)?
+6. How many pages do users visit on average?
+7. What percent of clicks go to organic search results?
+8. What percent of clicks go to Google Adwords or paid listings? 
+9. What percent of clicks go to video results?
+10. What percent of clicks go to google maps listings?
+11. What percent of clicks go to shopping results?
+12. What percent of clicks go to "people also ask" box?
+13. What percent of clicks go to page 2nd+ Google page? 
+14. How long is the average Google search session? (after entering a search query and hitting enter)
+15.	What´s the average number of clicks in a Google Search Session?
+16. Do we see any relationship between key variables in a Google Search?
+
+
+# 0.1 Methodology
+
+* Step 1 **Survey Questions**: Firstly, we aimed at providing a balanced of on the type of research questions. 
+
+1.	Commercial_1_pyhsical: find a car phone holder (assumption: Google shopping results)
+2.	Commercial_2_service: find a credit card (assumptions: affiliate articles)
+3.	Local: find a car accident lawyer (assumptions: ads)
+4.	Informational_1: find how to cut your own hair (assumptions: videos)
+5.	Informational_2: find how to treat back pain (assumptions: in-depth articles)
+6.	Transactional: find supplements that may help with lower back pain
+7.	Commercial_3_service: buy groceries online in your local area
+
+Survey questions: https://docs.google.com/document/d/1HNIJ_mWbREtgWrVgm5EvbhTjxL8he_Ix-HnHVBuuKHQ/edit?usp=sharing 
+
+* Step 2
+
+an example video can be watched here
+
+* Step 3
+
+* Step 4
+
+* Step 5
+
+# 0.2 Data Overview
+
+
+# 1. Use of suggested searches
 
 We measure for each question what percentage of users used the search suggestion.
 We find that users use them between 18% and 31% of the time, globally 23% of the time
@@ -72,7 +122,7 @@ item <- "When typing the search query, did they select one of the suggested sear
 include_png(item)
 ```
 
-# Time to first click (use check time stamping on video)
+# 2. Time to first click
 
 Using the video timestamps we can assess the time when users click for the first
 time. We find that the on average a user clicks first after 15 seconds and that
@@ -86,7 +136,7 @@ include_png("Seconds to first click (use check time stamping on video)")
 include_png("Seconds to first click (use check time stamping on video)_2")
 ```
 
-# Scrolling to the bottom of the search page
+# 3. Scrolling to the bottom of the search page
 
 On average 9% of users reach the bottom of the page, as we can expect 
 this varies however significantly depending on the query, the most specific queries
@@ -98,7 +148,7 @@ reach it when searching for supplements to treat back pain.
 include_png("Did they scroll to the end of the Google Search Page (Y/N)?")
 ```
 
-# Modifications of the search query
+# 4. Modifications of the search query
 
 In the big majority of cases (85%), we find that users don't change their search
 query at all. 11% change it once and only 4% change it 2 times or more. 
@@ -112,7 +162,7 @@ include_png("Times changed/modified search query")
 include_png("Times changed/modified search query_2")
 ```
 
-# Bounce
+# 5. Bounce
 
 We measure how many times searchers clicks a result, then bounces back to the 
 search results page and chooses a different result. We find that overall the
@@ -126,7 +176,7 @@ include_png("Times searcher clicks a result, then bounces back to the search res
 include_png("Times searcher clicks a result, then bounces back to the search results page and chooses a different result_2")
 ```
 
-# Number of pages visited
+# 6. Number of pages visited
 
 We find that most users visit only one page, but for some specific queries the
 average can go above 2.
@@ -136,7 +186,7 @@ include_png("Number of pages visited")
 include_png("Number of pages visited_2")
 ```
 
-# Clicks on organic search results
+# 7. Clicks on organic search results
 
 We find that most users click on organic search results at least once.
 However two questions stand out, few users click on organic search results when
@@ -147,7 +197,7 @@ include_png("Clicks on organic search results")
 include_png("Clicks on organic search results_2")
 ```
 
-# Clicks on Google AdWords or paid listings
+# 8. Clicks on Google AdWords or paid listings
 
 We find that users click on Google Adwords links or paid listings 19% of the
 time overall but depending on the query this can go from 0% to 30%.
@@ -157,7 +207,7 @@ include_png("Clicks on Google AdWords/paid listings")
 include_png("Clicks on Google AdWords/paid listings_2")
 ```
 
-# Clicks on video results
+# 9. Clicks on video results
 
 We measure how often users click on video links. Our results are very polarized
 here because for a single question around 95% of users clicked on a video result
@@ -168,7 +218,7 @@ include_png("Clicks on video results_2")
 ```
 
 
-# Clicks on Google Maps or local listings
+# 10. Clicks on Google Maps or local listings
 
 We find that users click on Google Maps or local listings 40% of the time
 when the query is about finding a car accident lawyer, and very few times
@@ -182,7 +232,7 @@ include_png("Clicks on Google Maps/local listings")
 include_png("Clicks on Google Maps/local listings_2")
 ```
 
-# Clicks on Google Shopping results
+# 11. Clicks on Google Shopping results
 
 Almost 20% of users click on Google Shopping results when the question is about
 finding a car phone holder, and 5% of them click them when looking for back
@@ -192,7 +242,7 @@ pain supplements. In other cases virtually no one clicks on  Google Shopping res
 include_png("Clicks on Google Shopping results")
 ```
 
-# Clicks "people also ask" box
+# 12. Clicks "people also ask" box
 
 Almost 15% of users click the "people also ask" box when the question is about
 finding supplements forback pain. For other queries this varies from 0% to 3%.
@@ -201,7 +251,7 @@ finding supplements forback pain. For other queries this varies from 0% to 3%.
 include_png("Clicks \"people also ask\" box")
 ```
 
-# Clicks to 2nd+ Google page
+# 13. Clicks to 2nd+ Google page
 
 We find that very few users (0.5%) click on the second google search page or further.
 Looking at the distinct questions, we see that users looking for supplemenetation
@@ -211,7 +261,7 @@ to treat back pain are the most likely to reach the second page or further (1.5%
 include_png("Clicks to 2nd+ Google page")
 ```
 
-# Time taken to complete the search
+# 14. Time taken to complete the search
 
 The average search is computed in 76 seconds, and we find that
 half of the searches are completed in 30 seconds to 90 seconds.
@@ -221,7 +271,7 @@ include_png("Seconds to complete search task")
 include_png("Seconds to complete search task_2")
 ```
 
-# Total Clicks
+# 15. Total Clicks
 
 During an average search a user clicks 7 times on average, 
 in our dataset is computed in 76 seconds, and we find that
@@ -232,13 +282,13 @@ include_png("Total Clicks")
 include_png("Total Clicks_2")
 ```
 
-# Correlations
+# 16. Relationships between variables
 
 We observe some important correlations between some variables of our study.
 In particular the number of modified queries, the number of bounces, and
 the number of seconds to complete a search show collerations from 0.7 to 0.9.
 
-This indicates that users faced with a challenging search try different strategies.
+This may indicate that users faced with a challenging Google search try different strategies.
 
 ```{r}
 include_png("correlations")
