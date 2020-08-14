@@ -1,7 +1,7 @@
 ---
 title: "Google User Behaviour Study"
 author: "FrontPage Data and Backlinko"
-date: "`r Sys.Date()`"
+date: "Last update: `r Sys.Date()`"
 output:
   html_document:
     theme: paper
@@ -57,7 +57,6 @@ include_png <- function(item) {
   } 
 ```
 
-The total recording time was 2276 minutes (38 hours)
 
 
 # 0. Introduction
@@ -83,7 +82,7 @@ In this study, we address the following research questions:
 13. What percent of clicks go to page 2nd+ Google page? 
 14. How long is the average Google search session? (after entering a search query and hitting enter)
 15.	What´s the average number of clicks in a Google Search Session?
-16. Do we see any relationship between key variables in a Google Search?
+16. Do we see any relationships between key variables?
 
 
 # 0.1 Methodology
@@ -102,7 +101,7 @@ You can find the survey questions here: [Link](https://docs.google.com/document/
 
 **Step 2 Survey Tools and Screen Recording**: Secondly, we decided to screen record survey participants to derive useful data points for our study. Our survey tool of choice was surveygizmo.com, as it nicely integrated with the screen recording software addpipe.com. US-Participants for the study were recruited on Mechnical Turk. The survey instructions can be found [here](https://docs.google.com/document/d/1HNIJ_mWbREtgWrVgm5EvbhTjxL8he_Ix-HnHVBuuKHQ/edit#bookmark=id.w8e7mmaqaluj) and a sample screen recording video can be watched [here](https://us1-addpipe.s3-us-west-1.amazonaws.com/4f295537e6741ceea82cfdd0c5caebf9/xOpH5an8WIW30XkcyS6NsTqK5nBPhaeD.mp4). 
 
-**Step 3 Data Annotation**: Thirdly, to consider only valid responses for the data annotation task, we reviewed each video individually to check whether instructions were followed properly. We then annotated the video data and entered each data point into a spread sheet. We collected data on 259 videos with a total length of 281 minutes.   
+**Step 3 Data Annotation**: Thirdly, to consider only valid responses for the data annotation task, we reviewed each video individually to check whether instructions were followed properly. We then annotated the video data and entered each data point into a spread sheet. We collected data on 259 videos with a total recording time of 2276 minutes (38 hours).   
 
 # 0.2 Overview of the respondents
 
