@@ -70,17 +70,9 @@ extrafont::loadfonts(device = "win")
 
 ```{r prep}
 ## packages
+#library(Hmisc)
 library(tidyverse)
-library(tidytext)
 library(colorspace)
-library(sf)
-library(maps)
-library(albersusa) # remotes::install_github("hrbrmstr/albersusa")
-library(rgeocodio) # remotes::install_github("hrbrmstr/rgeocodio")
-library(geojsonio)
-library(rgeos)
-library(ggwordcloud)
-library(patchwork)
 library(pdftools)
 library(showtext)
 
@@ -92,8 +84,8 @@ save <- TRUE
 dpi <- 750
 
 ## font
-extrafont::loadfonts(device = "win", quiet = TRUE)
-font_add_google("Montserrat", "Montserrat")
+#extrafont::loadfonts(device = "win", quiet = TRUE)
+#font_add_google("Montserrat", "Montserrat")
 # font_add_google("Overpass", "Overpass")
 # font_add_google("Overpass Mono", "Overpass Mono")
 
@@ -105,7 +97,7 @@ theme_set(ggthemes::theme_clean(base_size = 15, base_family = "Montserrat"))
 theme_update(plot.margin = margin(30, 30, 30, 30),
              plot.background = element_rect(color = "white",
                                             fill = "white"),
-             plot.title = element_text(size = 22,
+             plot.title = element_text(size = 20,
                                        face = "bold",
                                        lineheight = 1.05,
                                        hjust = .5,
@@ -198,6 +190,7 @@ num_format <- scales::format_format(big.mark = ",", small.mark = ",", scientific
 
 ## main color backlinko
 bl_col <- "#00d188"
+bl_dark <- darken(bl_col, .3, space = "HLS")
 
 ## colors + labels for interval stripes
 int_cols <- c("#bce2d5", "#79d8b6", bl_col, "#009f66", "#006c45", "#003925")
@@ -251,10 +244,11 @@ functions that we'll use
 ```{r}
 plots <- list()
 
-save_plot <- function(plot, item) {
+save_plot <- function(plot, item, width, height) {
   if (save)
     #ggsave(here::here("plots", paste0(make.names(item), ".pdf")), plots[[item]], width = 12, height = 11, device = cairo_pdf)
-    ggsave(here::here("plots", paste0(make.names(item), ".png")), plot, width = 12, height = 11)
+    #ggsave(here::here("plots", paste0(make.names(item), ".png")), plot, width = 12, height = 11)
+    ggsave(here::here("plots", paste0(make.names(item), ".pdf")), plot, width = width, height = height, device = cairo_pdf)
 }
 
 lollipop_chart <- function(full_data, item, title, xlab, nudge_x = 0, percent = TRUE, fun = ~mean(., na.rm = TRUE), digits = 1) {
@@ -268,11 +262,12 @@ lollipop_chart <- function(full_data, item, title, xlab, nudge_x = 0, percent = 
   summary_overall <-
     full_data %>%
     summarize_at(item, fun) %>%
-    mutate(question = "overall", group = "b")
+    mutate(question = "Overall", group = "b")
   
   summary_all <- 
     bind_rows(summary_by_q, summary_overall) %>%
     arrange_at(item) %>%
+    mutate(question = Hmisc::capitalize(question)) %>% 
     mutate(question = factor(question, question)) # sort factors
   
   ggplot(summary_all) +
@@ -280,10 +275,10 @@ lollipop_chart <- function(full_data, item, title, xlab, nudge_x = 0, percent = 
                      color = group), size = 2) + 
     geom_point(aes(x = !!sym(item), y = question, color = group), size = 7) +
     geom_text(data = summary_overall,
-              aes(!!sym(item), question, label = if(percent) scales::percent(!!sym(item), digits) else round(!!sym(item), digits)), color = "black", 
-              hjust = 0, nudge_x = nudge_x) +
+              aes(!!sym(item), question, label = if(percent) scales::percent(!!sym(item), digits) else round(!!sym(item), digits)), color = bl_dark, 
+              hjust = 0, nudge_x = nudge_x, family = "Montserrat", fontface = "bold") +
     labs(x = xlab, y = "") +
-    scale_color_manual(values = c("lightgreen","lightblue")) +
+    scale_color_manual(values = c(bl_col, bl_dark)) +
     {if (percent) scale_x_continuous(labels = function(x) scales::percent(x, digits))} +
     ggtitle(title) +
     theme(legend.position = "none")
@@ -314,14 +309,14 @@ quantile_chart <- function(full_data, item, title, xlab, ylab, qlab, meanlab, xm
   
   plot_data %>%
     ggplot(aes(!!sym(item), pct))  + 
-    geom_line() +
+    geom_line(color = "grey30") +
     coord_cartesian(xlim = c(0,xmax)) + 
     ggtitle(title) +
     labs(x = xlab, y = ylab) +
-    geom_point(aes(x,y), data = q_data, size = 4) +
-    geom_point(aes(x,y), data = mean_data, color = "blue", size = 4) +
-    geom_text(aes(x,y, label = lab), data = q_data, hjust = 0, nudge_x = nudge_x) +
-    geom_text(aes(x,y, label = lab), data = mean_data, hjust = 0, nudge_y = -0.05) +
+    geom_point(aes(x,y), data = q_data, size = 4, color = "grey30") +
+    geom_point(aes(x,y), data = mean_data, color = bl_col, size = 4) +
+    geom_text(aes(x,y, label = lab), data = q_data, hjust = 0, nudge_x = nudge_x, family = "Montserrat", color = "grey30", fontface = "bold") +
+    geom_text(aes(x,y, label = lab), data = mean_data, hjust = 0, nudge_x = nudge_x, family = "Montserrat", color = bl_col, fontface = "bold") +
     scale_y_continuous(labels = function(x) scales::percent(x, digits))
 }
 
@@ -363,14 +358,14 @@ quantile_chart2 <- function(full_data, item, title, xlab, ylab, qlab, meanlab, x
     coord_cartesian(xlim = c(0,xmax)) + 
     ggtitle(title) +
     labs(x = xlab, y = ylab) +
-    geom_point(aes(x_q1,y_q1), size = 4) +
-    geom_point(aes(x_q2,y_q2), size = 4) +
-    geom_point(aes(x_q3,y_q3), size = 4) +
-    geom_point(aes(x_avg, y_avg), color = "blue", size = 4) +
-    geom_text(aes(x_q1, y_q1, label = lab_q1), hjust = 0, nudge_x = nudge_x) +
-    geom_text(aes(x_q2, y_q2, label = lab_q2), hjust = 0, nudge_x = nudge_x) +
-    geom_text(aes(x_q3, y_q3, label = lab_q3), hjust = 0, nudge_x = nudge_x) +
-    geom_text(aes(x_avg, y_avg, label = lab_avg), hjust = 0, nudge_y = -0.05) +
+    geom_point(aes(x_q1,y_q1), size = 4, color = "grey30") +
+    geom_point(aes(x_q2,y_q2), size = 4, color = "grey30") +
+    geom_point(aes(x_q3,y_q3), size = 4, color = "grey30") +
+    geom_point(aes(x_avg, y_avg), color = bl_col, size = 4, color = "grey30") +
+    geom_text(aes(x_q1, y_q1, label = lab_q1), hjust = 0, nudge_x = nudge_x, family = "Montserrat", color = "grey30") +
+    geom_text(aes(x_q2, y_q2, label = lab_q2), hjust = 0, nudge_x = nudge_x, family = "Montserrat", color = "grey30") +
+    geom_text(aes(x_q3, y_q3, label = lab_q3), hjust = 0, nudge_x = nudge_x, family = "Montserrat", color = "grey30") +
+    geom_text(aes(x_avg, y_avg, label = lab_avg), hjust = 0, nudge_y = -0.05, family = "Montserrat", color = bl_col, fontface = "bold") +
     scale_y_continuous(labels = function(x) scales::percent(x, digits)) +
     facet_wrap("question", ncol = 2)
 }
@@ -384,8 +379,8 @@ bar_chart <- function(full_data, item,title, xlab, ylab, threshold) {
   mutate(n = n/sum(n)) %>%
   na.omit() %>%
   ggplot(aes(!!sym(item),n)) +
-  geom_col(fill = "lightgreen",color = "darkgreen") +
-  geom_text(aes(label = scales::percent(n,1)), vjust = 0, nudge_y = .02) +
+  geom_col(fill = bl_col,color = bl_dark) +
+  geom_text(aes(label = scales::percent(n,1)), vjust = 0, nudge_y = .02, family = "Montserrat") +
   ggtitle(title) +
   scale_y_continuous(labels = function(x) scales::percent(x,1)) +
   labs(x = xlab, y = ylab)
@@ -414,8 +409,8 @@ plots[["engines"]] <-
   arrange(desc(ratio)) %>%
   mutate(fav_engine = factor(fav_engine, fav_engine)) %>%
   ggplot(aes(fav_engine, ratio)) +
-  geom_col(fill = "lightgreen",color = "darkgreen") +
-  geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .02) +
+  geom_col(fill = bl_col,color = bl_dark) +
+  geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .02, family = "Montserrat") +
   ggtitle("94% of users most commonly use Google") +
   scale_y_continuous(labels = function(x) scales::percent(x,1)) +
   labs(x = "", y = "% of users")
@@ -430,14 +425,14 @@ plots[["engines2"]] <-
   arrange(desc(ratio)) %>%
   mutate(fav_engine = factor(fav_engine, fav_engine)) %>%
   ggplot(aes(fav_engine, ratio)) +
-  geom_col(fill = "lightgreen",color = "darkgreen") +
-  geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .001) +
+  geom_col(fill = bl_col,color = bl_dark) +
+  geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .001, family = "Montserrat") +
   ggtitle("Most commonly used browser among Google competitors") +
   scale_y_continuous(labels = function(x) scales::percent(x,1)) +
   labs(x = "", y = "% of users")
 
-save_plot(plots[["engines"]], "engines")
-save_plot(plots[["engines2"]], "engines2")
+save_plot(plots[["engines"]], "engines", 9, 6.5)
+save_plot(plots[["engines2"]], "engines2", 9, 6.5)
 
 
 
@@ -450,13 +445,13 @@ plots[["how_do_you_use_gs"]] <-
   arrange(desc(ratio)) %>%
   mutate(how_do_you_use_gs = factor(how_do_you_use_gs, how_do_you_use_gs)) %>%
   ggplot(aes(how_do_you_use_gs, ratio)) +
-  geom_col(fill = "lightgreen",color = "darkgreen") +
-  geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .01) +
+  geom_col(fill = bl_col,color = bl_dark) +
+  geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .01, family = "Montserrat") +
   ggtitle("Frequency of use of Google search") +
   scale_y_continuous(labels = function(x) scales::percent(x,1)) +
   labs(x = "", y = "% of users")
 
-save_plot(plots[["how_do_you_use_gs"]], "how_do_you_use_gs")
+save_plot(plots[["how_do_you_use_gs"]], "how_do_you_use_gs", 9.5, 7.5)
 ```
 
 
@@ -469,9 +464,9 @@ item <- "When typing the search query, did they select one of the suggested sear
 plots[[item]] <- lollipop_chart(
   full_data, item,
   "Suggested searches are used 23% of the time", "% of users who selected a suggestion",
-  nudge_x = .02, fun = ~mean(. != 0, na.rm = TRUE))
+  nudge_x = .01, fun = ~mean(. != 0, na.rm = TRUE))
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 10, 6.5)
 ```
 
 ## 1.2 Seconds to first click
@@ -490,30 +485,32 @@ item <- "Seconds to first click (use check time stamping on video)"
 plots[[item]] <- quantile_chart(
   full_data, item,
   "The average user clicks first after 15 seconds",
-  "time (seconds)", "% of users who click before time",
+  "Time (seconds)", "% of users who click before time",
   meanlab = "Average: %s sec", qlab = "%s%% click before %s sec",
-  xmax = 50, nudge_x = 3)
+  xmax = 50, nudge_x = 1.2)
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 9, 7)
 
+
+## might need soem additional work
 item_facets <- paste0(item,"_facets")
 plots[[item_facets]] <- quantile_chart2(
   full_data, item,
   "Time before first click by question",
-  "time (seconds)", "% of users who click before time",
+  "Time (seconds)", "% of users who click before time",
   meanlab = "Average: %s sec", qlab = "%s%% click before %s sec",
   xmax = 50, nudge_x = 3)
 
-save_plot(plots[[item_facets]], item_facets)
+save_plot(plots[[item_facets]], item_facets, 14, 16)
 
 item2 <- paste0(item,"_2")
 
 plots[[item2]] <- lollipop_chart(
   full_data, item,
-  "The average time to first click spans from 10 to 25 seconds", "time (seconds)",
+  "The average time to first click spans from 10 to 25 seconds", "Time (seconds)",
   nudge_x = 1, percent = FALSE)
 
-save_plot(plots[[item2]], item2)
+save_plot(plots[[item2]], item2, 10, 6.5)
 ```
 
 ## 1.3 Scrolling to the end of the search page
@@ -524,10 +521,10 @@ item <- "Did they scroll to the end of the Google Search Page (Y/N)?"
 plots[[item]] <- lollipop_chart(
   full_data, item,
   "9% of users reach the end of the page,\nbut it depends a lot on the query", 
-  "% of users who scrolled to the bottom", nudge_x = .01)
+  "% of users who scrolled to the bottom", nudge_x = .007)
 plots[[item]]
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 10, 6.5)
 ```
 
 ## 1.4 Times changed/modified search query
@@ -540,17 +537,17 @@ table(full_data[[6]])
 plots[[item]] <-  bar_chart(
   full_data, item,
   "85% of the time, users stick to their first choice of query",
-   "number of changes", "% of users", 2)
-save_plot(plots[[item]], item)
+   "Number of changes", "% of users", 2)
+save_plot(plots[[item]], item, 9, 6.5)
 
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
   "Percentage of users who modify their query", "", 
   fun = ~mean(. != 0, na.rm = TRUE),
-  nudge_x = .02)
+  nudge_x = .013)
 
-save_plot(plots[[item2]], item2)
+save_plot(plots[[item2]], item2, 10, 6.5)
 ```
 
 ## 1.5 Times searcher clicks a result, then bounces back to the search results page and chooses a different result
@@ -561,17 +558,17 @@ table(full_data[[7]])
 
 plots[[item]] <- bar_chart(
   full_data, item,
-  "", "number of clicks followed by bounces",  "% of users", 2)
+  "On average, 83% of users never bounce", "Number of clicks followed by bounces",  "% of users", 2)
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 9, 6.5)
 
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
   "10% to 30% of users bounce at least once", "% of users who bounce at least once", 
-  fun = ~mean(. != 0, na.rm = TRUE), nudge_x = .02)
+  fun = ~mean(. != 0, na.rm = TRUE), nudge_x = .013)
 
-save_plot(plots[[item2]], item2)
+save_plot(plots[[item2]], item2, 10, 6.5)
 ```
 
 ## 1.6 Number of pages visited
@@ -583,19 +580,19 @@ table(full_data[[item]])
 plots[[item]] <- 
   bar_chart(
     full_data, item,
-    "Most users visit only one page", "number of pages visited", 
+    "Most users visit only one page", "Number of pages visited", 
     "% of users", threshold = 4)
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 9, 6.5)
 
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
     full_data, item,
     "Average number of visited pages", "", 
-    nudge_x = .1,
+    nudge_x = .08,
     percent = FALSE)
 
-save_plot(plots[[item2]], item2)
+save_plot(plots[[item2]], item2, 10, 6.5)
 ```
 
 ## 1.7 Clicks on organic search results
@@ -607,20 +604,20 @@ table(full_data[[item]])
 plots[[item]] <- bar_chart(
   full_data, item,
   "Clicks on organic search results",
-  "number of clicks", "% of users",
+  "Number of clicks", "% of users",
   threshold = 3)
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 9, 6.5)
 
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
   "Percentage of users who click on organic search results", "", 
-  nudge_x = .05,
+  nudge_x = .03,
   percent = TRUE,
   fun = ~mean(. != 0, na.rm = TRUE))
 
-save_plot(plots[[item2]], item2)
+save_plot(plots[[item2]], item2, 10, 6.5)
 ```
 
 
@@ -633,19 +630,19 @@ table(full_data[[item]])
 plots[[item]] <- bar_chart(
   full_data, item,
   "Clicks on Google AdWords and paid listings",
-  "number of clicks", "% of users", 2)
+  "Number of clicks", "% of users", 2)
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 9, 6.5)
 
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
   "Percentage of users who click on Google AdWords or paid listings", "", 
-  nudge_x = .02,
+  nudge_x = .012,
   percent = TRUE,
   fun = ~mean(. != 0, na.rm = TRUE))
 
-save_plot(plots[[item2]], item2)
+save_plot(plots[[item2]], item2, 10, 6.5)
 ```
 
 
@@ -657,19 +654,19 @@ table(full_data[[item]])
 
 plots[[item]] <- bar_chart(
   full_data, item,
-  "Clicks on video results",  "number of clicks", "% of users", 2)
-save_plot(plots[[item]], item)
+  "Clicks on video results",  "Number of clicks", "% of users", 2)
+save_plot(plots[[item]], item, 9, 6.5)
 
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
   "Users are much more likely to click on video results\nif they look for how to cut one's hair",
   "% of users who click on video results", 
-  nudge_x = .02,
+  nudge_x = .03,
   percent = TRUE,
   fun = ~mean(. != 0, na.rm = TRUE))
 
-save_plot(plots[[item2]], item2)
+save_plot(plots[[item2]], item2, 10, 6.5)
 ```
 
 ## 1.10 Clicks on Google Maps/local listings
@@ -680,20 +677,20 @@ table(full_data[[item]])
 
 plots[[item]] <- bar_chart(
   full_data, item,
-  "In 94% of searches, the user won't click on Maps or local listings", "number of clicks", "% of users who click on Maps or local listings", 2)
+  "In 94% of searches, the user won't click\non Maps or local listings", "Number of clicks", "% of users who click on Maps or local listings", 2)
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 9, 7)
 
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
-  "Users are much more likely to click on Google Maps or local listings\nif they look for a car accident lawyer",
+  "Users are much more likely to click on Google Maps or\nlocal listings if they look for a car accident lawyer",
   "% of users who click on Google Maps or local listings", 
-  nudge_x = .02,
+  nudge_x = .015,
   percent = TRUE,
   fun = ~mean(. != 0, na.rm = TRUE))
 
-save_plot(plots[[item2]], item2)
+save_plot(plots[[item2]], item2, 10, 6.5)
 ```
 
 
@@ -738,9 +735,9 @@ table(full_data[[item]], useNA = "always")
 plots[[item]] <- lollipop_chart(
   full_data, item, 
   "Users are more likely to click on Google Shopping results\nif they look for supplements to treat back pain", "% of users who click on Google Shopping results",
-  fun = ~ mean(.!=0, na.rm =TRUE), nudge_x = .01)
+  fun = ~ mean(.!=0, na.rm =TRUE), nudge_x = .007)
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 10, 6.5)
 ```
 
 
@@ -754,9 +751,9 @@ plots[[item]] <- lollipop_chart(
   full_data, item, 
   "Users are more likely to click on \"people also ask\" box\nif they look for supplements to treat back pain", "% of users who click on \"people also ask\" box",
   fun = ~ mean(.!=0, na.rm =TRUE),
-  nudge_x = .01)
+  nudge_x = .005)
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 10, 6.5)
 ```
 
 ## 1.15 Clicks to 2nd+ Google page
@@ -769,9 +766,9 @@ plots[[item]] <- lollipop_chart(
   full_data, item, 
   "Very few user click on a further google page", "% of users who click on a further google page",
   fun = ~ mean(.!=0, na.rm =TRUE),
-  nudge_x = .001, digits = .1)
+  nudge_x = .0005, digits = .1)
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 10, 6.5)
 ```
 
 
@@ -792,14 +789,15 @@ item <- "Seconds to complete search task"
 
 plots[[item]] <- quantile_chart(
   full_data, item,
-  "On average a user takes 1 min 16 seconds to complete a search",
+  "On average a user takes 1 min 16 seconds\nto complete a search",
   "time (seconds)", "% of users who complete the task before time",
   meanlab = "Average : %s sec", qlab = "%s%% complete before %s sec",
-  xmax = 250, nudge_x = 8
+  xmax = 250, nudge_x = 7
 )
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 9, 7)
 
+## might need soem additional work
 item_facets <- paste0(item,"_facets")
 plots[[item_facets]] <- quantile_chart2(
   full_data, item,
@@ -808,17 +806,17 @@ plots[[item_facets]] <- quantile_chart2(
   meanlab = "Average: %s sec", qlab = "%s%% complete before %s sec",
   xmax = 250, nudge_x = 8)
 
-save_plot(plots[[item_facets]], item_facets)
+save_plot(plots[[item_facets]], item_facets, 14, 16)
 
 item2 <- paste0(item, "_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item, 
-  "Depending on the query the search takes an average time of 45 sec to 1 min 30", "time (seconds)",
+  "Depending on the query the search takes an average\ntime of 45 sec to 1 min 30", "Time (seconds)",
   fun = ~ mean(., na.rm =TRUE),
   percent = FALSE,
-  nudge_x = 8)
+  nudge_x = 5)
 
-save_plot(plots[[item2]], item2)
+save_plot(plots[[item2]], item2, 10, 6.5)
 ```
 
 
@@ -831,32 +829,32 @@ table(full_data[[item]], useNA = "always")
 plots[[item]] <- quantile_chart(
   full_data, item,
   "Total number of clicks",
-  "time (seconds)", "% of users who clicked less than this amount",
+  "Time (seconds)", "% of users who clicked less than this amount",
   meanlab = "Average : %s times", qlab = "%s%% click %s times or less",
-  xmax = 30, nudge_x = 1
+  xmax = 30, nudge_x = .8
 )
 
-save_plot(plots[[item]], item)
+save_plot(plots[[item]], item, 9, 7)
 
 item_facets <- paste0(item,"_facets")
 plots[[item_facets]] <- quantile_chart2(
   full_data, item,
   "Total number of clicks by question",
-  "time (seconds)", "% of users who clicked less than this amount",
+  "Time (seconds)", "% of users who clicked less than this amount",
   meanlab = "Average: %s sec", qlab = "%s%% click %s times or less",
   xmax = 30, nudge_x = 1)
 
-save_plot(plots[[item_facets]], item_facets)
+save_plot(plots[[item_facets]], item_facets, 14, 16)
 
 item2 <- paste0(item, "_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item, 
-  "Average total clicks", "clicks",
+  "Average total clicks", "Clicks",
   fun = ~ mean(., na.rm =TRUE),
   percent = FALSE,
-  nudge_x = .6)
+  nudge_x = .4)
 
-save_plot(plots[[item2]], item2)
+save_plot(plots[[item2]], item2, 9, 6.5)
 ```
 
 ## correlations
@@ -872,7 +870,7 @@ data2 <-
 
 plots[["correlations"]] <- GGally::ggcorr(
   data2, nbreaks = 8, palette ='RdGy', label = TRUE, label_size = 5, label_color = 'white')
-save_plot(plots[["correlations"]], "correlations")
+save_plot(plots[["correlations"]], "correlations", 11.5, 8.5)
 ```
 
 
@@ -892,5 +890,15 @@ use the pictures in final.Rmd.
 saveRDS(plots, here::here("proc_data/plots.RDS"))
 ```
 
+```{r convert-pdf-to-png, include = F}
+pdfs <- list.files(here::here("plots"), pattern = "*.pdf")
+
+setwd(here::here("plots", "png"))
+
+for(pdf in pdfs) {
+  pdf_convert(pdf = here::here("plots", pdf),
+              format = "png", dpi = 300)
+}
+```
 
 
