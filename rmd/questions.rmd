@@ -1,0 +1,182 @@
+---
+title: "Questions"
+author: "Antoine Fabri"
+date: "17 août 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Questions from google doc
+
+```{r, echo = FALSE}
+full_data <- readRDS(here::here("proc_data/clean_data.RDS"))
+```
+
+Questions from the google doc are answered here with counts and some comments.
+
+I can't completely elucidate why we can have many clicks on organic searches without bounce, but the data definitely says so.
+
+I give some hypothesis as to why.
+
+
+## Ignored questions
+
+The following questions were ignored as decided on whatsapp
+
+> “Almost 20% of users click on Google Shopping results”. What is the exact percentage?
+
+> Actually: please provide exact percentages for all data points. Ie. “We find that users click on Google Maps or local listings 40% of the time”.
+
+> “Almost 15% of users click the “people also ask” box when”. What is the exact percentage?
+
+> We find that the on average a user clicks first after 15 seconds. What is the exact average number?
+
+> On average 9% of users reach the bottom of the page. What is the exact number?
+
+
+## 7. bounce vs clicks
+
+> 83% never bounce vs. During an average search a user clicks 7 times on average.
+> How can both of these things be true? Is it that those that DO bounce end up clicking on lots of things?*
+
+Those who do bounce click more (12.4 times on average), but those who don't
+bounce dont click much less than 7 times (5.8 on average).
+
+```{r}
+mean(full_data$"Total Clicks"[
+  full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0
+], na.rm = TRUE)
+
+mean(full_data$"Total Clicks"[
+  full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" != 0
+], na.rm = TRUE)
+
+table(
+  clicks = full_data$"Total Clicks", 
+  bounces = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result")
+
+table(
+  clicks = full_data$"Total Clicks", 
+  no_bounce = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0)
+```
+
+We can try to see on hat they do click
+
+```{r}
+table(
+  clicks = full_data$"Clicks on organic search results", 
+  no_bounce = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0)
+
+
+table(
+  clicks = full_data$"Clicks on Google AdWords/paid listings", 
+  no_bounce = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0)
+
+
+table(
+  clicks = full_data$"Clicks on video results", 
+  no_bounce = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0)
+
+
+table(
+  clicks = full_data$"Clicks on Google Maps/local listings", 
+  no_bounce = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0)
+
+
+table(
+  clicks = full_data$"Clicks on Image blocks", 
+  no_bounce = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0)
+
+
+table(
+  clicks = full_data$"Clicks on Google Shopping results", 
+  no_bounce = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0)
+
+table(
+  clicks = full_data$"Clicks \"people also ask\" box" , 
+  no_bounce = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0)
+
+table(
+  clicks = full_data$"Clicks to 2nd+ Google page" , 
+  no_bounce = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0)
+```
+
+
+
+## 8. page visits vs clicks
+
+> The majority (59%) of Google users visit a single page vs a user clicks 7 times on average.
+> How can both of these things be true?
+
+People who visit a single page click 5 times on average, the rest clicks 9.5 times
+on average.
+
+See above to see on what they click, visited pages include only non google pages.
+
+```{r}
+
+mean(full_data$"Total Clicks"[
+  full_data$"Number of pages visited" == 1
+], na.rm = TRUE)
+
+mean(full_data$"Total Clicks"[
+  full_data$"Number of pages visited" != 1
+], na.rm = TRUE)
+
+table(
+  clicks = full_data$"Total Clicks", 
+  pages_visited = full_data$"Number of pages visited")
+
+table(
+  clicks = full_data$"Total Clicks", 
+  one_page_visited = full_data$"Number of pages visited" == 1)
+```
+
+## 9. bounce vs page visits
+
+> 83% never bounce vs. 59% of Google Users Click on a Single Result During Their Search Session.
+> How can both things be true? 
+
+I suppose that the definition of a page to bounce from is more generous than the definition of a page visited.
+
+We have the following definition : 
+
+
+*Number of pages visited/viewed* : 
+
+> Number of different pages a searcher visited (exlcuding google pages and surveygizmo).
+> A pageview can be the initial load of a page, a reload or a revisit to the page. If the searcher only stayed always on a goolge property, please enter the value 0.
+
+The key might be in "exlcuding google pages and surveygizmo" here, the bounces
+from these pages might be counted while the page visits are not.
+
+We saw in 7. however that some users clicked on 5 organic links with no bounce counted.
+
+The video might be interpreted as if a bounce occurs only
+when we open a new tab, and not if we use the "back" button from the browser.
+
+Another possibility is that a bounce is counted as such only if user goes back 
+immediately, and not if they stayed a few seconds to read the content in detail.
+
+
+```{r}
+table(
+  pages_visited = full_data$"Number of pages visited", 
+  bounces = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result")
+
+
+table(
+  visits_one_page = full_data$"Number of pages visited" == 1, 
+  no_bounce = full_data$"Times searcher clicks a result, then bounces back to the search results page and chooses a different result" == 0)
+```
+
+
+## 10. Clicks on organic results
+
+> https://www.screencast.com/t/3418UxUuba. 65%. Shouldn’t this be 76% (49+10+17)? Based on: https://www.screencast.com/t/PQ1aMo8JD 
+
+The linked chart doesn't show the 17 figure, it shows 7, so the sum would be 66%, given the figures are rounded it's consistent with the 65 figure.
+
