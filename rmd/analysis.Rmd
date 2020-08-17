@@ -411,7 +411,7 @@ plots[["engines"]] <-
   ggplot(aes(fav_engine, ratio)) +
   geom_col(fill = bl_col,color = bl_dark) +
   geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .02, family = "Montserrat") +
-  ggtitle("94% of users most commonly use Google") +
+  ggtitle("94% of Users Most Commonly Use Google") +
   scale_y_continuous(labels = function(x) scales::percent(x,1)) +
   labs(x = "", y = "% of users")
 
@@ -427,7 +427,7 @@ plots[["engines2"]] <-
   ggplot(aes(fav_engine, ratio)) +
   geom_col(fill = bl_col,color = bl_dark) +
   geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .001, family = "Montserrat") +
-  ggtitle("Most commonly used browser among Google competitors") +
+  ggtitle("Most Commonly Used Browser among Google Competitors") +
   scale_y_continuous(labels = function(x) scales::percent(x,1)) +
   labs(x = "", y = "% of users")
 
@@ -447,14 +447,12 @@ plots[["how_do_you_use_gs"]] <-
   ggplot(aes(how_do_you_use_gs, ratio)) +
   geom_col(fill = bl_col,color = bl_dark) +
   geom_text(aes(label = scales::percent(ratio,.1)), vjust = 0, nudge_y = .01, family = "Montserrat") +
-  ggtitle("Frequency of use of Google search") +
+  ggtitle("Frequency of Use of Google Search") +
   scale_y_continuous(labels = function(x) scales::percent(x,1)) +
   labs(x = "", y = "% of users")
 
 save_plot(plots[["how_do_you_use_gs"]], "how_do_you_use_gs", 9.5, 7.5)
 ```
-
-
 
 ## 1.1 When typing the search query, did they select one of the suggested searches? (Y/N)
 
@@ -463,7 +461,7 @@ item <- "When typing the search query, did they select one of the suggested sear
 
 plots[[item]] <- lollipop_chart(
   full_data, item,
-  "Suggested searches are used 23% of the time", "% of users who selected a suggestion",
+  "Commercial and Transaction Queries Lead to More\nGoogle Autocomplete Suggestions Being Used", "% of users who selected a suggestion",
   nudge_x = .01, fun = ~mean(. != 0, na.rm = TRUE))
 
 save_plot(plots[[item]], item, 10, 6.5)
@@ -484,7 +482,7 @@ item <- "Seconds to first click (use check time stamping on video)"
 
 plots[[item]] <- quantile_chart(
   full_data, item,
-  "The average user clicks first after 15 seconds",
+  "50% of Google Users Click Within 9 Seconds of Their Search",
   "Time (seconds)", "% of users who click before time",
   meanlab = "Average: %s sec", qlab = "%s%% click before %s sec",
   xmax = 50, nudge_x = 1.2)
@@ -496,7 +494,7 @@ save_plot(plots[[item]], item, 9, 7)
 item_facets <- paste0(item,"_facets")
 plots[[item_facets]] <- quantile_chart2(
   full_data, item,
-  "Time before first click by question",
+  "Time Before First Click by Question",
   "Time (seconds)", "% of users who click before time",
   meanlab = "Average: %s sec", qlab = "%s%% click before %s sec",
   xmax = 50, nudge_x = 3)
@@ -507,7 +505,7 @@ item2 <- paste0(item,"_2")
 
 plots[[item2]] <- lollipop_chart(
   full_data, item,
-  "The average time to first click spans from 10 to 25 seconds", "Time (seconds)",
+  "The Average Time to First Click Spans from 10 to 25 Seconds", "Time (seconds)",
   nudge_x = 1, percent = FALSE)
 
 save_plot(plots[[item2]], item2, 10, 6.5)
@@ -520,7 +518,7 @@ item <- "Did they scroll to the end of the Google Search Page (Y/N)?"
 
 plots[[item]] <- lollipop_chart(
   full_data, item,
-  "9% of users reach the end of the page,\nbut it depends a lot on the query", 
+  "9% of Users Scroll to the Bottom of the First Page\n(Although This Is Highly Dependent On the Search Query)", 
   "% of users who scrolled to the bottom", nudge_x = .007)
 plots[[item]]
 
@@ -536,14 +534,14 @@ table(full_data[[6]])
 
 plots[[item]] <-  bar_chart(
   full_data, item,
-  "85% of the time, users stick to their first choice of query",
+  "85% of the Time, Users Stick to their First Choice of Query",
    "Number of changes", "% of users", 2)
 save_plot(plots[[item]], item, 9, 6.5)
 
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
-  "Percentage of users who modify their query", "", 
+  "Percentage of Users Who Modify their Query", "", 
   fun = ~mean(. != 0, na.rm = TRUE),
   nudge_x = .013)
 
@@ -558,14 +556,14 @@ table(full_data[[7]])
 
 plots[[item]] <- bar_chart(
   full_data, item,
-  "On average, 83% of users never bounce", "Number of clicks followed by bounces",  "% of users", 2)
+  "83% of Google Searchers Don’t Bounce Back to the SERPs", "Number of clicks followed by bounces",  "% of users", 2)
 
 save_plot(plots[[item]], item, 9, 6.5)
 
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
-  "10% to 30% of users bounce at least once", "% of users who bounce at least once", 
+  "Bounce Rate Varies Depending On Type of Query", "% of users who bounce at least once", 
   fun = ~mean(. != 0, na.rm = TRUE), nudge_x = .013)
 
 save_plot(plots[[item2]], item2, 10, 6.5)
@@ -580,7 +578,7 @@ table(full_data[[item]])
 plots[[item]] <- 
   bar_chart(
     full_data, item,
-    "Most users visit only one page", "Number of pages visited", 
+    "59% of Google Users Click on a Single\nResult During Their Search Session", "Number of pages visited", 
     "% of users", threshold = 4)
 
 save_plot(plots[[item]], item, 9, 6.5)
@@ -588,7 +586,7 @@ save_plot(plots[[item]], item, 9, 6.5)
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
     full_data, item,
-    "Average number of visited pages", "", 
+    "Average Number of Visited Pages", "", 
     nudge_x = .08,
     percent = FALSE)
 
@@ -603,7 +601,7 @@ table(full_data[[item]])
 
 plots[[item]] <- bar_chart(
   full_data, item,
-  "Clicks on organic search results",
+  "65% of Google Searchers Click On the Organic Results",
   "Number of clicks", "% of users",
   threshold = 3)
 
@@ -612,7 +610,7 @@ save_plot(plots[[item]], item, 9, 6.5)
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
-  "Percentage of users who click on organic search results", "", 
+  "Percentage of Users Who Click on Organic Search Results", "", 
   nudge_x = .03,
   percent = TRUE,
   fun = ~mean(. != 0, na.rm = TRUE))
@@ -629,7 +627,7 @@ table(full_data[[item]])
 
 plots[[item]] <- bar_chart(
   full_data, item,
-  "Clicks on Google AdWords and paid listings",
+  "19% of Users Click on a Google Ad",
   "Number of clicks", "% of users", 2)
 
 save_plot(plots[[item]], item, 9, 6.5)
@@ -637,7 +635,7 @@ save_plot(plots[[item]], item, 9, 6.5)
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
-  "Percentage of users who click on Google AdWords or paid listings", "", 
+  "Commercial and Transactional Queries Generate More\nGoogle Ad Clicks Than Informational Queries", "", 
   nudge_x = .012,
   percent = TRUE,
   fun = ~mean(. != 0, na.rm = TRUE))
@@ -654,7 +652,7 @@ table(full_data[[item]])
 
 plots[[item]] <- bar_chart(
   full_data, item,
-  "Clicks on video results",  "Number of clicks", "% of users", 2)
+  "Clicks on Video Results",  "Number of clicks", "% of users", 2)
 save_plot(plots[[item]], item, 9, 6.5)
 
 item2 <- paste0(item,"_2")
@@ -677,14 +675,14 @@ table(full_data[[item]])
 
 plots[[item]] <- bar_chart(
   full_data, item,
-  "In 94% of searches, the user won't click\non Maps or local listings", "Number of clicks", "% of users who click on Maps or local listings", 2)
+  "In 94% of Searches, the User Won't Click\non Maps or Local Listings", "Number of clicks", "% of users who click on Maps or local listings", 2)
 
 save_plot(plots[[item]], item, 9, 7)
 
 item2 <- paste0(item,"_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item,
-  "Users are much more likely to click on Google Maps or\nlocal listings if they look for a car accident lawyer",
+  "Users are Much more Likely to Click on Google Maps or\nLocal Listings if They Look for a Car Accident Lawyer",
   "% of users who click on Google Maps or local listings", 
   nudge_x = .015,
   percent = TRUE,
@@ -734,7 +732,7 @@ table(full_data[[item]], useNA = "always")
 
 plots[[item]] <- lollipop_chart(
   full_data, item, 
-  "Users are more likely to click on Google Shopping results\nif they look for supplements to treat back pain", "% of users who click on Google Shopping results",
+  "Users are more Likely to Click on Google Shopping Results\nif They Look for Supplements to Treat Back Pain", "% of users who click on Google Shopping results",
   fun = ~ mean(.!=0, na.rm =TRUE), nudge_x = .007)
 
 save_plot(plots[[item]], item, 10, 6.5)
@@ -749,7 +747,7 @@ table(full_data[[item]], useNA = "always")
 
 plots[[item]] <- lollipop_chart(
   full_data, item, 
-  "Users are more likely to click on \"people also ask\" box\nif they look for supplements to treat back pain", "% of users who click on \"people also ask\" box",
+  "Users are more Likely to Click on \"People also Ask\" Box\nif They Look for Supplements to Treat Back Pain", "% of users who click on \"people also ask\" box",
   fun = ~ mean(.!=0, na.rm =TRUE),
   nudge_x = .005)
 
@@ -764,7 +762,7 @@ table(full_data[[item]], useNA = "always")
 
 plots[[item]] <- lollipop_chart(
   full_data, item, 
-  "Very few user click on a further google page", "% of users who click on a further google page",
+  "Very few Users Click on a Further Google Page", "% of users who click on a further google page",
   fun = ~ mean(.!=0, na.rm =TRUE),
   nudge_x = .0005, digits = .1)
 
@@ -789,7 +787,7 @@ item <- "Seconds to complete search task"
 
 plots[[item]] <- quantile_chart(
   full_data, item,
-  "On average a user takes 1 min 16 seconds\nto complete a search",
+  "The Average Google Search Session Lasts 76 Seconds",
   "time (seconds)", "% of users who complete the task before time",
   meanlab = "Average : %s sec", qlab = "%s%% complete before %s sec",
   xmax = 250, nudge_x = 7
@@ -801,7 +799,7 @@ save_plot(plots[[item]], item, 9, 7)
 item_facets <- paste0(item,"_facets")
 plots[[item_facets]] <- quantile_chart2(
   full_data, item,
-  "Time to complete a search by question",
+  "Time to Complete Search By Query",
   "time (seconds)", "% of users who complete the task before time",
   meanlab = "Average: %s sec", qlab = "%s%% complete before %s sec",
   xmax = 250, nudge_x = 8)
@@ -811,7 +809,7 @@ save_plot(plots[[item_facets]], item_facets, 14, 16)
 item2 <- paste0(item, "_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item, 
-  "Depending on the query the search takes an average\ntime of 45 sec to 1 min 30", "Time (seconds)",
+  "Depending on the Query the Search Takes an Average\nTime of 45 Sec to 90 Sec", "Time (seconds)",
   fun = ~ mean(., na.rm =TRUE),
   percent = FALSE,
   nudge_x = 5)
@@ -828,7 +826,7 @@ table(full_data[[item]], useNA = "always")
 
 plots[[item]] <- quantile_chart(
   full_data, item,
-  "Total number of clicks",
+  "Total Number of Clicks",
   "Time (seconds)", "% of users who clicked less than this amount",
   meanlab = "Average : %s times", qlab = "%s%% click %s times or less",
   xmax = 30, nudge_x = .8
@@ -839,7 +837,7 @@ save_plot(plots[[item]], item, 9, 7)
 item_facets <- paste0(item,"_facets")
 plots[[item_facets]] <- quantile_chart2(
   full_data, item,
-  "Total number of clicks by question",
+  "Total Number of Clicks by Question",
   "Time (seconds)", "% of users who clicked less than this amount",
   meanlab = "Average: %s sec", qlab = "%s%% click %s times or less",
   xmax = 30, nudge_x = 1)
@@ -849,7 +847,7 @@ save_plot(plots[[item_facets]], item_facets, 14, 16)
 item2 <- paste0(item, "_2")
 plots[[item2]] <- lollipop_chart(
   full_data, item, 
-  "Average total clicks", "Clicks",
+  "Average Total Clicks", "Clicks",
   fun = ~ mean(., na.rm =TRUE),
   percent = FALSE,
   nudge_x = .4)
