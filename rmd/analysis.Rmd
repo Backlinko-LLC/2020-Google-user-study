@@ -504,7 +504,7 @@ save_plot(plots[[item]], item, 9, 7)
 item_facets <- paste0(item,"_facets")
 plots[[item_facets]] <- quantile_chart2(
   full_data, item,
-  "Time Before First Click by Question",
+  "Time to First Click Varies Depending on Query Type",
   "Time (seconds)", "% of users who click before time",
   meanlab = "Average: %s sec", qlab = "%s%% click before %s sec",
   xmax = 50, nudge_x = 3)
@@ -757,7 +757,7 @@ table(full_data[[item]], useNA = "always")
 
 plots[[item]] <- lollipop_chart(
   full_data, item, 
-  "Users are more Likely to Click on \"People also Ask\" Box\nif They Look for Supplements to Treat Back Pain", "% of users who click on \"people also ask\" box",
+  "Few Google Searchers Interact With People Also Ask Boxes. \nAlthough This Depends Largely On The Search Query", "% of users who click on People Also Ask box",
   fun = ~ mean(.!=0, na.rm =TRUE),
   nudge_x = .005)
 
