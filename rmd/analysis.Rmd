@@ -270,6 +270,10 @@ lollipop_chart <- function(full_data, item, title, xlab, nudge_x = 0, percent = 
     mutate(question = Hmisc::capitalize(question)) %>% 
     mutate(question = factor(question, question)) # sort factors
   
+  print(summary_all)
+  print(summary_overall)
+  print(summary_by_q)
+  
   ggplot(summary_all) +
     geom_segment(aes(y= question, yend = question, x = 0, xend = !!sym(item),
                      color = group), size = 2) + 
@@ -306,6 +310,10 @@ quantile_chart <- function(full_data, item, title, xlab, ylab, qlab, meanlab, xm
     x = approx(plot_data$pct, plot_data[[item]], xout = c(.25,.5,.75))$y,
     y = c(.25,.50,.75),
     lab = sprintf(qlab, y*100, q))
+  
+  print(plot_data)
+  print(mean_data)
+  print(q_data)
   
   plot_data %>%
     ggplot(aes(!!sym(item), pct))  + 
@@ -351,6 +359,7 @@ quantile_chart2 <- function(full_data, item, title, xlab, ylab, qlab, meanlab, x
            lab_q3 = sprintf(qlab, 75, x_q3)) %>%
     ungroup()
     
+  print(plot_data)
   
   plot_data %>%
     ggplot(aes(!!sym(item), pct))  + 
@@ -378,6 +387,7 @@ bar_chart <- function(full_data, item,title, xlab, ylab, threshold) {
   ungroup() %>%
   mutate(n = n/sum(n)) %>%
   na.omit() %>%
+  print() %>%
   ggplot(aes(!!sym(item),n)) +
   geom_col(fill = bl_col,color = bl_dark) +
   geom_text(aes(label = scales::percent(n,1)), vjust = 0, nudge_y = .02, family = "Montserrat") +
